@@ -306,7 +306,7 @@ class Autopilot {
         out["text"] = (node.value as TextSpan).text;
       }
 
-      if (node.value is RenderParagraph) {
+      if (node.value is RenderParagraph && element.widget is RichText) {
         var n = node.value as RenderParagraph;
         node.getChildren().forEach((subnode) {
           if (subnode.value is TextSpan) {
@@ -323,6 +323,7 @@ class Autopilot {
               "left": pos.dx,
               "top": pos.dy,
             };
+            out["text"] = textInfo;
             texts.add(textInfo);
           }
         });
