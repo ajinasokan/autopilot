@@ -33,6 +33,7 @@ class Autopilot {
       '/hold': _doHold,
       '/drag': _doDrag,
       '/screenshot': _getScreenshot,
+      '/keyboard': _keyboard,
       ...extraHandlers,
     };
 
@@ -84,6 +85,15 @@ class Autopilot {
         .set("content-type", "application/json; charset=utf-8");
     request.response.write(body);
     request.response.close();
+  }
+
+  Future<void> _keyboard(HttpRequest r) async {
+    if (r.method == "GET") {
+      SystemChannels.textInput.invokeMethod("TextInput.show");
+    } else if (r.method == "DELETE") {
+      SystemChannels.textInput.invokeMethod("TextInput.hide");
+    }
+    r.response.close();
   }
 
   Future<void> _getWidgets(HttpRequest r) async {
