@@ -118,10 +118,27 @@ class Autopilot {
   }
 
   Future<void> _getTexts(HttpRequest r) async {
-    var texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
-    if (r.uri.queryParameters.containsKey("query")) {
-      final query = r.uri.queryParameters["query"];
+    final serialized = _serializeTree();
+    final params = r.uri.queryParameters;
+
+    var texts = serialized["texts"] as List<Map<String, dynamic>>;
+    if (params.containsKey("text")) {
+      final query = params["text"];
       texts = texts.where((item) => item["text"].contains(query)).toList();
+    } else if (params.containsKey("key")) {
+      final keys = serialized["keys"] as List<Map<String, dynamic>>;
+      final widget = keys.firstWhere(
+        (info) => info["key"] == params["key"],
+        orElse: () => null,
+      );
+      if (widget != null) {
+        texts = texts.where((item) {
+          return item["position"]["left"] == widget["position"]["left"] &&
+              item["position"]["top"] == widget["position"]["top"];
+        }).toList();
+      } else {
+        texts = [];
+      }
     }
     writeResponse(
       request: r,

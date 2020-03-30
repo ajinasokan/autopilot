@@ -76,7 +76,9 @@ But Flutter framework is so transparent I was able to tap into its internal and 
 
 `root`/texts
 
-`root`/texts?query=<text>
+`root`/texts?text=<text>
+
+`root`/texts?key=<key>
 
 `root`/editables
 
