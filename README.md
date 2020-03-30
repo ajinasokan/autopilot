@@ -4,6 +4,13 @@ A test driver for Flutter to do QA testing without sharing app source code. It e
 
 ## Getting started
 
+Add to pubspec:
+
+```
+dependencies:
+  autopilot:
+```
+
 Create `main_test.dart` along side of your main file like this:
 
 ```dart
@@ -13,13 +20,9 @@ import 'package:autopilot/autopilot.dart';
 final autopilot = Autopilot();
 
 void main() {
-    WidgetsFlutterBinding.ensureInitialized();
-    
     autopilot.init();
-
     app.main();
 }
-
 ```
 
 Run on device/emulator:
@@ -28,38 +31,41 @@ Run on device/emulator:
 flutter run --release --target lib/main_test.dart
 ```
 
-On Android forward port 8080 so that you can access it:
+On Android forward port `8080` so that you can access it via `localhost`:
 
 ```shell
 adb forward tcp:8080 tcp:8080
 ```
 
-Get all texts shown in app:
+Consider following example:
 
-```shell
-curl localhost:8080/texts
+```dart
+Text(
+  "Hello World!",
+  key: Key("txtGreet"),
+)
 ```
 
-Writing tests in python using pytest:
+Writing tests in python using `pytest`:
 
 ```python
-def test_answer():
-    assert func(3) == 4
+# example_test.py
+import requests
+
+root = "http://localhost:8080"
+
+def get(path):
+    return requests.get(root + path).json()
+
+def test_greet():
+    greet = get("/texts?key=txtGreet")[0]
+    assert greet["text"] == "Hello World!"
 ```
 
 Run it:
 
 ```shell
-python -m pytest flutter_test.py
-
-================ test session starts ================
-platform darwin -- Python 2.7.15, pytest-4.6.9, py-1.8.1, pluggy-0.13.1
-rootdir: /Users/ajinasokan/Desktop/Tests
-collected 1 item
-
-flutter_test.py .                                        [100%]
-
-================ 1 passed in 0.01 seconds ================
+python -m pytest example_test.py
 ```
 
 ## Inspiration
