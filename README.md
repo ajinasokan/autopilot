@@ -76,14 +76,22 @@ But Flutter framework is so transparent I was able to tap into its internal and 
 
 `root`/texts
 
+`root`/texts?query=<text>
+
 `root`/editables
 
 `root`/type?text=<text>
 
 `root`/tap?x=<x>&y=<y>
 
+`root`/tap?key=<key>
+
+`root`/tap?text=<text>
+
 `root`/hold?x=<x>&y=<y>
 
 `root`/drag?x=<x>&y=<y>&dx=<dx>&dy=<dy>
 
 `root`/screenshot
+
+`root`/keyboard - GET, DELETE

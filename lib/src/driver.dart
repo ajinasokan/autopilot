@@ -118,7 +118,11 @@ class Autopilot {
   }
 
   Future<void> _getTexts(HttpRequest r) async {
-    final texts = _serializeTree()["texts"];
+    var texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
+    if (r.uri.queryParameters.containsKey("query")) {
+      final query = r.uri.queryParameters["query"];
+      texts = texts.where((item) => item["text"].contains(query)).toList();
+    }
     writeResponse(
       request: r,
       body: _indentedJson(texts),
@@ -167,11 +171,58 @@ class Autopilot {
       },
     );
 
-    await gesture.down(Offset(
-      double.parse(r.uri.queryParameters["x"]),
-      double.parse(r.uri.queryParameters["y"]),
-    ));
+    var params = r.uri.queryParameters;
+    double x, y;
 
+    if (params.containsKey("x") && params.containsKey("y")) {
+      x = double.parse(params["x"]);
+      y = double.parse(params["y"]);
+    } else if (params.containsKey("key")) {
+      final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+      final widget = keys.firstWhere(
+        (info) => info["key"] == params["key"],
+        orElse: () => null,
+      );
+      if (widget == null) {
+        sendError(
+          r,
+          Exception("Given key doesn't exist."),
+          StackTrace.current,
+        );
+        return;
+      } else {
+        x = widget["position"]["left"];
+        y = widget["position"]["top"];
+      }
+    } else if (params.containsKey("text")) {
+      final texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
+      final widget = texts.firstWhere(
+        (info) => info["text"] == params["text"],
+        orElse: () => null,
+      );
+      if (widget == null) {
+        sendError(
+          r,
+          Exception("Given text doesn't exist."),
+          StackTrace.current,
+        );
+        return;
+      } else {
+        x = widget["position"]["left"];
+        y = widget["position"]["top"];
+      }
+    }
+
+    if (x == null || y == null) {
+      sendError(
+        r,
+        Exception("Unable to get x & y points. Validate your params."),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    await gesture.down(Offset(x, y));
     await gesture.up();
     r.response.close();
   }
