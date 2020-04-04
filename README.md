@@ -4,7 +4,7 @@ A test driver for Flutter to do QA testing without sharing app source code. It e
 
 ## Getting started
 
-Add autopilot to pubspec:
+Add [package](https://pub.dev/packages/autopilot) to pubspec:
 
 ```
 dependencies:
@@ -70,7 +70,7 @@ python -m pytest example_test.py
 
 ## Inspiration
 
-Flutter has a really amazing testing suite for Unit, UI and Integration testing. But one problem is that you need to know/learn Dart and you have to share the source code of the app to the person who writes tests. This is doesn't work in every work environments.
+Flutter has a really amazing testing suite for Unit, UI and Integration testing. But one problem is that you need to know/learn Dart and you have to share the source code of the app to the person who writes tests. This doesn't work in every work environments.
 
 But Flutter framework is so transparent I was able to tap into its internals and build a JSON API which can provide pretty much everything you need to write UI automation tests.
 
