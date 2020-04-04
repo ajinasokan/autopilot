@@ -4,14 +4,14 @@ A test driver for Flutter to do QA testing without sharing app source code. It e
 
 ## Getting started
 
-Add to pubspec:
+Add autopilot to pubspec:
 
 ```
 dependencies:
   autopilot:
 ```
 
-Create `main_test.dart` along side of your main file like this:
+Create `main_test.dart` along side of your `main.dart` file like this:
 
 ```dart
 import 'main.dart' as app;
@@ -25,7 +25,7 @@ void main() {
 }
 ```
 
-Run on device/emulator:
+Run your app on device/emulator:
 
 ```shell
 flutter run --release --target lib/main_test.dart
@@ -46,7 +46,7 @@ Text(
 )
 ```
 
-Writing tests in python using `pytest`:
+Example of a test in python using `pytest`:
 
 ```python
 # example_test.py
@@ -72,34 +72,66 @@ python -m pytest example_test.py
 
 Flutter has a really amazing testing suite for Unit, UI and Integration testing. But one problem is that you need to know/learn Dart and you have to share the source code of the app to the person who writes tests. This is doesn't work in every work environments.
 
-But Flutter framework is so transparent I was able to tap into its internal and build an API which can provide pretty much everything you need to write UI automation tests.
+But Flutter framework is so transparent I was able to tap into its internals and build a JSON API which can provide pretty much everything you need to write UI automation tests.
 
 ## APIs
 
-`root`/widgets
+**GET /widgets**
 
-`root`/keys
+Returns entire widget tree
 
-`root`/texts
+**GET /keys**
 
-`root`/texts?text=<text>
+Returns list of all the keyed widgets
 
-`root`/texts?key=<key>
+**GET /texts**
 
-`root`/editables
+Returns list of all text widgets
 
-`root`/type?text=<text>
+**GET /texts?text=&lt;text&gt;**
 
-`root`/tap?x=<x>&y=<y>
+Returns list of all text widgets with matching text
 
-`root`/tap?key=<key>
+**GET /texts?key=&lt;key&gt;**
 
-`root`/tap?text=<text>
+Returns text widget that matches key
 
-`root`/hold?x=<x>&y=<y>
+**GET /editables**
 
-`root`/drag?x=<x>&y=<y>&dx=<dx>&dy=<dy>
+Returns list of all text fields
 
-`root`/screenshot
+**GET /type?text=&lt;text&gt;**
 
-`root`/keyboard - GET, DELETE
+Types given text to the focused text field
+
+**GET /tap?x=&lt;x&gt;&y=&lt;y&gt;**
+
+Taps at given offset
+
+**GET /tap?key=&lt;key&gt;**
+
+Taps on widget with given key
+
+**GET /tap?text=&lt;text&gt;**
+
+Taps on text widget with given text
+
+**GET /hold?x=&lt;x&gt;&y=&lt;y&gt;**
+
+Tap and hold on given offset
+
+**GET /drag?x=&lt;x&gt;&y=&lt;y&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;**
+
+Taps at (x,y) and drags (dx, dy) offset
+
+**GET /screenshot**
+
+Returns screenshot of app in PNG
+
+**GET /keyboard**
+
+Shows keyboard
+
+**DELETE /keyboard**
+
+Hides keyboard
