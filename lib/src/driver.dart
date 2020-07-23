@@ -424,7 +424,8 @@ class _Driver {
           "position": {
             "left": pos.dx,
             "top": pos.dy,
-          }
+          },
+          "text": n.text.text,
         });
       }
 
