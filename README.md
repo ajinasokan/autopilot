@@ -11,17 +11,18 @@ dependencies:
   autopilot:
 ```
 
-Create `main_test.dart` along side of your `main.dart` file like this:
+Create `main_test.dart` along side of your `main.dart` file. Make AutoPilot widget parent of your MaterialApp or root widget like below:
 
 ```dart
-import 'main.dart' as app;
+import 'package:flutter/material.dart';
 import 'package:autopilot/autopilot.dart';
 
-final autopilot = Autopilot();
+import 'my_app.dart';
 
 void main() {
-    autopilot.init();
-    app.main();
+  runApp(
+    Autopilot(child: MyApp())
+  );
 }
 ```
 
