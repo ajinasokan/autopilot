@@ -10,18 +10,52 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart' show TestGesture;
 import 'text_input.dart';
 
-typedef Future<void> Handler(HttpRequest r);
+part 'autopilot.dart';
 
-class Autopilot {
+typedef Future<void> Handler(AutopilotAction r);
+
+class AutopilotAction {
+  final HttpRequest request;
+
+  AutopilotAction(this.request);
+
+  HttpResponse get response => request.response;
+
+  void sendError(dynamic e, StackTrace s) async {
+    writeResponse(
+      status: 500,
+      body: _indentedJson({
+        "error": e.toString(),
+        "stacktrace": s.toString(),
+      }),
+    );
+  }
+
+  void writeResponse({
+    int status = 200,
+    dynamic body,
+  }) {
+    request.response.statusCode = status;
+    request.response.headers
+        .set("content-type", "application/json; charset=utf-8");
+    request.response.write(_indentedJson(body));
+    request.response.close();
+  }
+
+  String _indentedJson(dynamic payload) {
+    return JsonEncoder.withIndent("  ").convert(payload);
+  }
+}
+
+class _Driver {
   var _textInputDriver = TextInputDriver();
 
-  void init({
-    int port = 8080,
-    Map<String, Handler> extraHandlers = const {},
-  }) async {
+  _Driver({
+    @required String host,
+    @required int port,
+    @required Map<String, Handler> extraHandlers,
+  }) {
     _textInputDriver.init();
-
-    final server = await HttpServer.bind("localhost", port);
 
     Map<String, Handler> routes = {
       '/widgets': _getWidgets,
@@ -37,89 +71,66 @@ class Autopilot {
       ...extraHandlers,
     };
 
-    _handle(server, routes);
+    _handle(host, port, routes);
   }
 
   void _handle(
-    HttpServer server,
+    String host,
+    int port,
     Map<String, Handler> routes,
   ) async {
+    final server = await HttpServer.bind(host, port);
+
     await for (var request in server) {
       final handler = routes[request.uri.path];
+      final action = AutopilotAction(request);
       try {
         if (handler == null) {
-          writeResponse(
-            request: request,
+          action.writeResponse(
             status: 404,
-            body: _indentedJson({
-              "error": "route not found",
-            }),
+            body: {"error": "route not found"},
           );
         } else {
-          await routes[request.uri.path](request);
+          await routes[request.uri.path](action);
         }
       } catch (error, stackTrace) {
-        sendError(request, error, stackTrace);
+        action.sendError(error, stackTrace);
       }
     }
   }
 
-  String _indentedJson(dynamic payload) {
-    return JsonEncoder.withIndent("  ").convert(payload);
-  }
-
-  void sendError(HttpRequest r, dynamic e, StackTrace s) async {
-    writeResponse(
-      request: r,
-      status: 500,
-      body: _indentedJson({
-        "error": e.toString(),
-        "stacktrace": s.toString(),
-      }),
-    );
-  }
-
-  void writeResponse({HttpRequest request, int status = 200, String body}) {
-    request.response.statusCode = status;
-    request.response.headers
-        .set("content-type", "application/json; charset=utf-8");
-    request.response.write(body);
-    request.response.close();
-  }
-
-  Future<void> _keyboard(HttpRequest r) async {
-    if (r.method == "GET") {
+  Future<void> _keyboard(AutopilotAction action) async {
+    if (action.request.method == "GET") {
       SystemChannels.textInput.invokeMethod("TextInput.show");
-    } else if (r.method == "DELETE") {
+    } else if (action.request.method == "DELETE") {
       SystemChannels.textInput.invokeMethod("TextInput.hide");
     }
-    r.response.close();
+    action.response.close();
   }
 
-  Future<void> _getWidgets(HttpRequest r) async {
+  Future<void> _getWidgets(AutopilotAction action) async {
     final widgetTree = _serializeTree()["tree"];
 
     if (widgetTree == null) {
-      sendError(r, Exception("Render tree unavailable"), StackTrace.current);
+      action.sendError(
+          Exception("Render tree unavailable"), StackTrace.current);
     } else {
-      writeResponse(
-        request: r,
-        body: _indentedJson(widgetTree),
+      action.writeResponse(
+        body: widgetTree,
       );
     }
   }
 
-  Future<void> _getKeys(HttpRequest r) async {
+  Future<void> _getKeys(AutopilotAction action) async {
     final keys = _serializeTree()["keys"];
-    writeResponse(
-      request: r,
-      body: _indentedJson(keys),
+    action.writeResponse(
+      body: keys,
     );
   }
 
-  Future<void> _getTexts(HttpRequest r) async {
+  Future<void> _getTexts(AutopilotAction action) async {
     final serialized = _serializeTree();
-    final params = r.uri.queryParameters;
+    final params = action.request.uri.queryParameters;
 
     var texts = serialized["texts"] as List<Map<String, dynamic>>;
     if (params.containsKey("text")) {
@@ -140,21 +151,19 @@ class Autopilot {
         texts = [];
       }
     }
-    writeResponse(
-      request: r,
-      body: _indentedJson(texts),
+    action.writeResponse(
+      body: texts,
     );
   }
 
-  Future<void> _getEditables(HttpRequest r) async {
+  Future<void> _getEditables(AutopilotAction action) async {
     final texts = _serializeTree()["editables"];
-    writeResponse(
-      request: r,
-      body: _indentedJson(texts),
+    action.writeResponse(
+      body: texts,
     );
   }
 
-  Future<void> _getScreenshot(HttpRequest r) async {
+  Future<void> _getScreenshot(AutopilotAction action) async {
     final renderElement = WidgetsBinding.instance?.renderView;
     OffsetLayer layer = renderElement.layer;
     var pixelRatio = WidgetsBinding.instance.window.devicePixelRatio;
@@ -165,18 +174,18 @@ class Autopilot {
 
     ByteData byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     Uint8List pngBytes = byteData.buffer.asUint8List();
-    r.response.headers.set("content-type", "image/png");
-    r.response.add(pngBytes);
-    r.response.close();
+    action.response.headers.set("content-type", "image/png");
+    action.response.add(pngBytes);
+    action.response.close();
   }
 
-  Future<void> _doType(HttpRequest r) async {
-    var text = r.uri.queryParameters["text"];
+  Future<void> _doType(AutopilotAction action) async {
+    var text = action.request.uri.queryParameters["text"];
     _textInputDriver.type(text);
-    r.response.close();
+    action.response.close();
   }
 
-  Future<void> _doTap(HttpRequest r) async {
+  Future<void> _doTap(AutopilotAction action) async {
     var gesture = TestGesture(
       hitTester: (location) {
         final HitTestResult result = HitTestResult();
@@ -188,7 +197,7 @@ class Autopilot {
       },
     );
 
-    var params = r.uri.queryParameters;
+    var params = action.request.uri.queryParameters;
     double x, y;
 
     if (params.containsKey("x") && params.containsKey("y")) {
@@ -201,8 +210,7 @@ class Autopilot {
         orElse: () => null,
       );
       if (widget == null) {
-        sendError(
-          r,
+        action.sendError(
           Exception("Given key doesn't exist."),
           StackTrace.current,
         );
@@ -218,8 +226,7 @@ class Autopilot {
         orElse: () => null,
       );
       if (widget == null) {
-        sendError(
-          r,
+        action.sendError(
           Exception("Given text doesn't exist."),
           StackTrace.current,
         );
@@ -231,8 +238,7 @@ class Autopilot {
     }
 
     if (x == null || y == null) {
-      sendError(
-        r,
+      action.sendError(
         Exception("Unable to get x & y points. Validate your params."),
         StackTrace.current,
       );
@@ -241,10 +247,10 @@ class Autopilot {
 
     await gesture.down(Offset(x, y));
     await gesture.up();
-    r.response.close();
+    action.request.response.close();
   }
 
-  Future<void> _doHold(HttpRequest r) async {
+  Future<void> _doHold(AutopilotAction action) async {
     var gesture = TestGesture(
       hitTester: (location) {
         final HitTestResult result = HitTestResult();
@@ -257,15 +263,15 @@ class Autopilot {
     );
 
     await gesture.down(Offset(
-      double.parse(r.uri.queryParameters["x"]),
-      double.parse(r.uri.queryParameters["y"]),
+      double.parse(action.request.uri.queryParameters["x"]),
+      double.parse(action.request.uri.queryParameters["y"]),
     ));
     await Future.delayed(Duration(milliseconds: 500));
     await gesture.up();
-    r.response.close();
+    action.response.close();
   }
 
-  Future<void> _doDrag(HttpRequest r) async {
+  Future<void> _doDrag(AutopilotAction action) async {
     var gesture = TestGesture(
       hitTester: (location) {
         final HitTestResult result = HitTestResult();
@@ -278,13 +284,13 @@ class Autopilot {
     );
 
     await gesture.down(Offset(
-      double.parse(r.uri.queryParameters["x"]),
-      double.parse(r.uri.queryParameters["y"]),
+      double.parse(action.request.uri.queryParameters["x"]),
+      double.parse(action.request.uri.queryParameters["y"]),
     ));
 
     var offset = Offset(
-      double.parse(r.uri.queryParameters["dx"]),
-      double.parse(r.uri.queryParameters["dy"]),
+      double.parse(action.request.uri.queryParameters["dx"]),
+      double.parse(action.request.uri.queryParameters["dy"]),
     );
     final double touchSlopX = 20.0;
     final double touchSlopY = 20.0;
@@ -361,7 +367,7 @@ class Autopilot {
       await gesture.moveBy(offset);
     }
     await gesture.up();
-    r.response.close();
+    action.response.close();
   }
 
   Map<String, dynamic> _serializeTree() {
@@ -388,7 +394,7 @@ class Autopilot {
         var n = node.value as RenderParagraph;
         node.getChildren().forEach((subnode) {
           if (subnode.value is TextSpan) {
-            var text = (subnode.value as TextSpan).text.toString();
+            var text = (subnode.value as TextSpan).text;
             var textInfo = <String, dynamic>{
               "text": text,
             };
