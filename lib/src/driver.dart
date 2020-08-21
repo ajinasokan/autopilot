@@ -24,10 +24,10 @@ class AutopilotAction {
   void sendError(dynamic e, StackTrace s) async {
     writeResponse(
       status: 500,
-      body: _indentedJson({
+      body: {
         "error": e.toString(),
         "stacktrace": s.toString(),
-      }),
+      },
     );
   }
 
