@@ -50,7 +50,7 @@ class _AutopilotState extends State<Autopilot> {
               ignoringSemantics: true,
               child: Container(
                 height: 20,
-                color: Colors.red,
+                color: Colors.red.withAlpha(180),
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(2.0),
