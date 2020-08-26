@@ -8,19 +8,45 @@ class TextInputDriver {
     SystemChannels.textInput.setMockMethodCallHandler(_handler);
   }
 
-  void type(String text) {
-    var value = TextEditingValue(text: text);
+  void _handlePlatformMessage(String methodName, dynamic arguments) {
     ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
       SystemChannels.textInput.name,
       SystemChannels.textInput.codec.encodeMethodCall(
         MethodCall(
-          'TextInputClient.updateEditingState',
-          <dynamic>[_clientId, value.toJSON()],
+          methodName,
+          arguments,
         ),
       ),
       (ByteData data) {},
     );
   }
+
+  void type(String text) {
+    var value = TextEditingValue(text: text);
+    _handlePlatformMessage('TextInputClient.updateEditingState',
+        <dynamic>[_clientId, value.toJSON()]);
+  }
+
+  void submit(String type) {
+    _handlePlatformMessage('TextInputClient.performAction',
+        <dynamic>[_clientId, submitTypes[type].toString()]);
+  }
+
+  Map<String, TextInputAction> get submitTypes => {
+        'continueAction': TextInputAction.continueAction,
+        'done': TextInputAction.done,
+        'emergencyCall': TextInputAction.emergencyCall,
+        'go': TextInputAction.go,
+        'join': TextInputAction.join,
+        'newline': TextInputAction.newline,
+        'next': TextInputAction.next,
+        'none': TextInputAction.none,
+        'previous': TextInputAction.previous,
+        'route': TextInputAction.route,
+        'search': TextInputAction.search,
+        'send': TextInputAction.send,
+        'unspecified': TextInputAction.unspecified,
+      };
 
   Future<dynamic> _handler(MethodCall methodCall) async {
     ui.window.sendPlatformMessage(
