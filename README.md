@@ -136,3 +136,9 @@ Shows keyboard
 **DELETE /keyboard**
 
 Hides keyboard
+
+**POST /keyboard?type=&lt;type&gt;**
+
+Submits a keyboard action.
+
+Some actions may not be available on all platforms. See [TextInputAction](https://api.flutter.dev/flutter/services/TextInputAction-class.html) for more information.
