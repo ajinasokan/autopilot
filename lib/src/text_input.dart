@@ -27,7 +27,7 @@ class TextInputDriver {
         <dynamic>[_clientId, value.toJSON()]);
   }
 
-  void submit(String type) {
+  void keyboardAction(String type) {
     _handlePlatformMessage('TextInputClient.performAction',
         <dynamic>[_clientId, submitTypes[type].toString()]);
   }

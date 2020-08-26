@@ -125,7 +125,7 @@ class _Driver {
       return;
     }
 
-    _textInputDriver.submit(type);
+    _textInputDriver.keyboardAction(type);
   }
 
   Future<void> _getWidgets(AutopilotAction action) async {
