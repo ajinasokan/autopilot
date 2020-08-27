@@ -8,7 +8,7 @@ class TextInputDriver {
     SystemChannels.textInput.setMockMethodCallHandler(_handler);
   }
 
-  void _handlePlatformMessage(String methodName, dynamic arguments) {
+  void _handlePlatformMessage(String methodName, List<dynamic> arguments) {
     ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
       SystemChannels.textInput.name,
       SystemChannels.textInput.codec.encodeMethodCall(
