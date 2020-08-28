@@ -104,8 +104,28 @@ class _Driver {
       SystemChannels.textInput.invokeMethod("TextInput.show");
     } else if (action.request.method == "DELETE") {
       SystemChannels.textInput.invokeMethod("TextInput.hide");
+    } else if (action.request.method == "POST") {
+      _handleKeyboardAction(action);
     }
     action.response.close();
+  }
+
+  String get _acceptableValuesMsg =>
+      'Acceptable values are: [${_textInputDriver.submitTypes.keys.join(', ')}]';
+
+  Future<void> _handleKeyboardAction(AutopilotAction action) async {
+    final params = action.request.uri.queryParameters;
+    final acceptableTypes = _textInputDriver.submitTypes.keys;
+    final type = params['type'];
+    if (type == null || !acceptableTypes.contains(type)) {
+      action.sendError(
+          Exception(
+              "Type '$type' is not an available action. $_acceptableValuesMsg"),
+          StackTrace.current);
+      return;
+    }
+
+    _textInputDriver.keyboardAction(type);
   }
 
   Future<void> _getWidgets(AutopilotAction action) async {
