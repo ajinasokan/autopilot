@@ -205,17 +205,16 @@ class _Driver {
     action.response.close();
   }
 
-  Future<void> _doTap(AutopilotAction action) async {
-    var gesture = TestGesture(
-      hitTester: (location) {
-        final HitTestResult result = HitTestResult();
-        RendererBinding.instance.hitTest(result, location);
-        return result;
-      },
-      dispatcher: (PointerEvent event, HitTestResult result) async {
-        RendererBinding.instance.dispatchEvent(event, result);
+  TestGesture _createGesture() {
+    return TestGesture(
+      dispatcher: (PointerEvent event) async {
+        RendererBinding.instance.handlePointerEvent(event);
       },
     );
+  }
+
+  Future<void> _doTap(AutopilotAction action) async {
+    final gesture = _createGesture();
 
     var params = action.request.uri.queryParameters;
     double x, y;
@@ -271,16 +270,7 @@ class _Driver {
   }
 
   Future<void> _doHold(AutopilotAction action) async {
-    var gesture = TestGesture(
-      hitTester: (location) {
-        final HitTestResult result = HitTestResult();
-        RendererBinding.instance.hitTest(result, location);
-        return result;
-      },
-      dispatcher: (PointerEvent event, HitTestResult result) async {
-        RendererBinding.instance.dispatchEvent(event, result);
-      },
-    );
+    final gesture = _createGesture();
 
     await gesture.down(Offset(
       double.parse(action.request.uri.queryParameters["x"]),
@@ -292,16 +282,7 @@ class _Driver {
   }
 
   Future<void> _doDrag(AutopilotAction action) async {
-    var gesture = TestGesture(
-      hitTester: (location) {
-        final HitTestResult result = HitTestResult();
-        RendererBinding.instance.hitTest(result, location);
-        return result;
-      },
-      dispatcher: (PointerEvent event, HitTestResult result) async {
-        RendererBinding.instance.dispatchEvent(event, result);
-      },
-    );
+    final gesture = _createGesture();
 
     await gesture.down(Offset(
       double.parse(action.request.uri.queryParameters["x"]),
