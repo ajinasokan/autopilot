@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:convert';
+import 'package:collection/collection.dart' show IterableExtension;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
@@ -57,9 +58,9 @@ class _Driver {
   var _textInputDriver = TextInputDriver();
 
   _Driver({
-    @required String host,
-    @required int port,
-    @required Map<String, Handler> extraHandlers,
+    required String host,
+    required int port,
+    required Map<String, Handler> extraHandlers,
   }) {
     _textInputDriver.init();
 
@@ -97,7 +98,7 @@ class _Driver {
             body: {"error": "route not found"},
           );
         } else {
-          await routes[request.uri.path](action);
+          await handler(action);
         }
       } catch (error, stackTrace) {
         action.sendError(error, stackTrace);
@@ -158,18 +159,17 @@ class _Driver {
     final serialized = _serializeTree();
     final params = action.request.uri.queryParameters;
 
-    var texts = serialized["texts"] as List<Map<String, dynamic>>;
+    var texts = serialized["texts"] as List<Map<String, dynamic>>?;
     if (params.containsKey("text")) {
       final query = params["text"];
-      texts = texts.where((item) => item["text"].contains(query)).toList();
+      texts = texts!.where((item) => item["text"].contains(query)).toList();
     } else if (params.containsKey("key")) {
       final keys = serialized["keys"] as List<Map<String, dynamic>>;
-      final widget = keys.firstWhere(
+      final widget = keys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
-        orElse: () => null,
       );
       if (widget != null) {
-        texts = texts.where((item) {
+        texts = texts!.where((item) {
           return item["position"]["left"] == widget["position"]["left"] &&
               item["position"]["top"] == widget["position"]["top"];
         }).toList();
@@ -190,15 +190,16 @@ class _Driver {
   }
 
   Future<void> _getScreenshot(AutopilotAction action) async {
-    final renderElement = WidgetsBinding.instance?.renderView;
-    OffsetLayer layer = renderElement.layer;
-    var pixelRatio = WidgetsBinding.instance.window.devicePixelRatio;
+    final RenderView renderElement = WidgetsBinding.instance!.renderView;
+    OffsetLayer layer = renderElement.layer as OffsetLayer;
+    var pixelRatio = WidgetsBinding.instance!.window.devicePixelRatio;
     var pixelSize = renderElement.size * pixelRatio;
     ui.Image image = await layer.toImage(
       layer.offset & pixelSize,
     );
 
-    ByteData byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    ByteData byteData =
+        (await image.toByteData(format: ui.ImageByteFormat.png))!;
     Uint8List pngBytes = byteData.buffer.asUint8List();
     action.response.headers.set("content-type", "image/png");
     action.response.add(pngBytes);
@@ -206,7 +207,7 @@ class _Driver {
   }
 
   Future<void> _doType(AutopilotAction action) async {
-    var text = action.request.uri.queryParameters["text"];
+    var text = action.request.uri.queryParameters["text"]!;
     _textInputDriver.type(text);
     action.sendSuccess();
   }
@@ -214,7 +215,7 @@ class _Driver {
   TestGesture _createGesture() {
     return TestGesture(
       dispatcher: (PointerEvent event) async {
-        RendererBinding.instance.handlePointerEvent(event);
+        RendererBinding.instance!.handlePointerEvent(event);
       },
     );
   }
@@ -223,16 +224,15 @@ class _Driver {
     final gesture = _createGesture();
 
     var params = action.request.uri.queryParameters;
-    double x, y;
+    double? x, y;
 
     if (params.containsKey("x") && params.containsKey("y")) {
-      x = double.parse(params["x"]);
-      y = double.parse(params["y"]);
+      x = double.parse(params["x"]!);
+      y = double.parse(params["y"]!);
     } else if (params.containsKey("key")) {
       final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
-      final widget = keys.firstWhere(
+      final widget = keys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
-        orElse: () => null,
       );
       if (widget == null) {
         action.sendError(
@@ -246,9 +246,8 @@ class _Driver {
       }
     } else if (params.containsKey("text")) {
       final texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
-      final widget = texts.firstWhere(
+      final widget = texts.firstWhereOrNull(
         (info) => info["text"] == params["text"],
-        orElse: () => null,
       );
       if (widget == null) {
         action.sendError(
@@ -279,8 +278,8 @@ class _Driver {
     final gesture = _createGesture();
 
     await gesture.down(Offset(
-      double.parse(action.request.uri.queryParameters["x"]),
-      double.parse(action.request.uri.queryParameters["y"]),
+      double.parse(action.request.uri.queryParameters["x"]!),
+      double.parse(action.request.uri.queryParameters["y"]!),
     ));
     await Future.delayed(Duration(milliseconds: 500));
     await gesture.up();
@@ -291,13 +290,13 @@ class _Driver {
     final gesture = _createGesture();
 
     await gesture.down(Offset(
-      double.parse(action.request.uri.queryParameters["x"]),
-      double.parse(action.request.uri.queryParameters["y"]),
+      double.parse(action.request.uri.queryParameters["x"]!),
+      double.parse(action.request.uri.queryParameters["y"]!),
     ));
 
     var offset = Offset(
-      double.parse(action.request.uri.queryParameters["dx"]),
-      double.parse(action.request.uri.queryParameters["dy"]),
+      double.parse(action.request.uri.queryParameters["dx"]!),
+      double.parse(action.request.uri.queryParameters["dy"]!),
     );
     final double touchSlopX = 20.0;
     final double touchSlopY = 20.0;
@@ -384,11 +383,11 @@ class _Driver {
     List<Map<String, dynamic>> editables = [];
     List<Map<String, dynamic>> keys = [];
 
-    Map<String, dynamic> serialize(Element element) {
+    Map<String, dynamic>? serialize(Element? element) {
       if (element == null) return null;
-      var node = element.renderObject.toDiagnosticsNode();
+      var node = element.renderObject!.toDiagnosticsNode();
 
-      Map<String, Object> out = {
+      Map<String, Object?> out = {
         "widget": element.widget.runtimeType.toString(),
         "render": node.toDescription(),
       };
@@ -398,7 +397,7 @@ class _Driver {
       }
 
       if (node.value is RenderParagraph && element.widget is RichText) {
-        var n = node.value as RenderParagraph;
+        var n = node.value as RenderParagraph?;
         node.getChildren().forEach((subnode) {
           if (subnode.value is TextSpan) {
             var text = (subnode.value as TextSpan).text;
@@ -406,7 +405,7 @@ class _Driver {
               "text": text,
             };
             textInfo["size"] = {
-              "height": n.size.height,
+              "height": n!.size.height,
               "width": n.size.width,
             };
             var pos = n.localToGlobal(Offset.zero);
@@ -432,7 +431,7 @@ class _Driver {
             "left": pos.dx,
             "top": pos.dy,
           },
-          "text": n.text.text,
+          "text": n.text!.text,
         });
       }
 
@@ -449,7 +448,7 @@ class _Driver {
         };
       }
 
-      List<Map<String, Object>> props = [];
+      List<Map<String, Object?>> props = [];
       out["props"] = props;
 
       node.getProperties().forEach((p) {
@@ -467,7 +466,7 @@ class _Driver {
         keys.add({...out});
       }
 
-      List<Map<String, Object>> children = [];
+      List<Map<String, Object?>?> children = [];
       out["children"] = children;
 
       element.visitChildren((node) {

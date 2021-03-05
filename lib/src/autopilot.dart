@@ -11,7 +11,7 @@ class Autopilot extends StatefulWidget {
     this.host = "localhost",
     this.port = 8080,
     this.extraHandlers = const {},
-    this.child,
+    required this.child,
     this.hideBanner = false,
   });
 
@@ -20,7 +20,7 @@ class Autopilot extends StatefulWidget {
 }
 
 class _AutopilotState extends State<Autopilot> {
-  _Driver driver;
+  _Driver? driver;
 
   @override
   void initState() {

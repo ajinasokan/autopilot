@@ -2,14 +2,14 @@ import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 
 class TextInputDriver {
-  int _clientId = 0;
+  int? _clientId = 0;
 
   void init() {
     SystemChannels.textInput.setMockMethodCallHandler(_handler);
   }
 
   void _handlePlatformMessage(String methodName, List<dynamic> arguments) {
-    ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+    ServicesBinding.instance!.defaultBinaryMessenger.handlePlatformMessage(
       SystemChannels.textInput.name,
       SystemChannels.textInput.codec.encodeMethodCall(
         MethodCall(
@@ -17,7 +17,7 @@ class TextInputDriver {
           arguments,
         ),
       ),
-      (ByteData data) {},
+      (ByteData? data) {},
     );
   }
 
@@ -52,7 +52,7 @@ class TextInputDriver {
     ui.window.sendPlatformMessage(
       SystemChannels.textInput.name,
       SystemChannels.textInput.codec.encodeMethodCall(methodCall),
-      (ByteData data) {},
+      (ByteData? data) {},
     );
 
     switch (methodCall.method) {
