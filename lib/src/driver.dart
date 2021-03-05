@@ -21,8 +21,8 @@ class AutopilotAction {
 
   HttpResponse get response => request.response;
 
-  void sendError(dynamic e, StackTrace s) async {
-    writeResponse(
+  Future<void> sendError(dynamic e, StackTrace s) async {
+    await writeResponse(
       status: 500,
       body: {
         "error": e.toString(),
@@ -31,15 +31,21 @@ class AutopilotAction {
     );
   }
 
-  void writeResponse({
+  Future<void> sendSuccess() async {
+    await writeResponse(
+      body: {"status": "success"},
+    );
+  }
+
+  Future<void> writeResponse({
     int status = 200,
     dynamic body,
-  }) {
+  }) async {
     request.response.statusCode = status;
     request.response.headers
         .set("content-type", "application/json; charset=utf-8");
     request.response.write(_indentedJson(body));
-    request.response.close();
+    await request.response.close();
   }
 
   String _indentedJson(dynamic payload) {
@@ -107,7 +113,7 @@ class _Driver {
     } else if (action.request.method == "POST") {
       _handleKeyboardAction(action);
     }
-    action.response.close();
+    action.sendSuccess();
   }
 
   String get _acceptableValuesMsg =>
@@ -202,7 +208,7 @@ class _Driver {
   Future<void> _doType(AutopilotAction action) async {
     var text = action.request.uri.queryParameters["text"];
     _textInputDriver.type(text);
-    action.response.close();
+    action.sendSuccess();
   }
 
   TestGesture _createGesture() {
@@ -266,7 +272,7 @@ class _Driver {
 
     await gesture.down(Offset(x, y));
     await gesture.up();
-    action.request.response.close();
+    action.sendSuccess();
   }
 
   Future<void> _doHold(AutopilotAction action) async {
@@ -278,7 +284,7 @@ class _Driver {
     ));
     await Future.delayed(Duration(milliseconds: 500));
     await gesture.up();
-    action.response.close();
+    action.sendSuccess();
   }
 
   Future<void> _doDrag(AutopilotAction action) async {
@@ -368,7 +374,7 @@ class _Driver {
       await gesture.moveBy(offset);
     }
     await gesture.up();
-    action.response.close();
+    action.sendSuccess();
   }
 
   Map<String, dynamic> _serializeTree() {
