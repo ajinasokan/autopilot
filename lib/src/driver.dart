@@ -400,7 +400,7 @@ class _Driver {
         var n = node.value as RenderParagraph?;
         node.getChildren().forEach((subnode) {
           if (subnode.value is TextSpan) {
-            var text = (subnode.value as TextSpan).text;
+            var text = (subnode.value as TextSpan).toPlainText();
             var textInfo = <String, dynamic>{
               "text": text,
             };

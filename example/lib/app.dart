@@ -97,6 +97,14 @@ class _MyHomePageState extends State<MyHomePage> {
               style: Theme.of(context).textTheme.headline4,
               key: Key("txtCount"),
             ),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: "hello"),
+                  TextSpan(text: "world"),
+                ],
+              ),
+            ),
             TextButton(
               onPressed: () {
                 _counter = 0;
