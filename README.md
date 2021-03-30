@@ -8,7 +8,14 @@ Add [package](https://pub.dev/packages/autopilot) to pubspec:
 
 ```
 dependencies:
-  autopilot:
+  autopilot: ^0.0.2
+```
+
+For null safe version:
+
+```
+dependencies:
+  autopilot: ^0.1.0
 ```
 
 Create `main_test.dart` along side of your `main.dart` file. Make AutoPilot widget parent of your MaterialApp or root widget like below:

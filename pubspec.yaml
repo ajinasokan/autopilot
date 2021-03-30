@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-dev_dependencies:
+  collection: ^1.15.0
   flutter_test:
     sdk: flutter
 

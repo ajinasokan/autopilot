@@ -1,3 +1,10 @@
+## 0.1.0
+
+* Migrated to null safety
+* Flutter 2.0 support
+* Sends JSON response for all requests
+* Added example project
+
 ## 0.0.2
 
 * Widget based setup of Autopilot
