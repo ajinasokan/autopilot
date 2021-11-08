@@ -62,8 +62,6 @@ class _Driver {
     required int port,
     required Map<String, Handler> extraHandlers,
   }) {
-    _textInputDriver.init();
-
     Map<String, Handler> routes = {
       '/widgets': _getWidgets,
       '/keys': _getKeys,
@@ -422,6 +420,10 @@ class _Driver {
       if (node.value is RenderEditable) {
         var n = node.value as RenderEditable;
         var pos = n.localToGlobal(Offset.zero);
+        String? text = "";
+        if (n.text != null && n.text is TextSpan) {
+          text = (n.text! as TextSpan).text;
+        }
         editables.add({
           "size": {
             "height": n.size.height,
@@ -431,7 +433,7 @@ class _Driver {
             "left": pos.dx,
             "top": pos.dy,
           },
-          "text": n.text!.text,
+          "text": text,
         });
       }
 

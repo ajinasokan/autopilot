@@ -1,13 +1,6 @@
 import 'package:flutter/services.dart';
-import 'dart:ui' as ui;
 
 class TextInputDriver {
-  int? _clientId = 0;
-
-  void init() {
-    SystemChannels.textInput.setMockMethodCallHandler(_handler);
-  }
-
   void _handlePlatformMessage(String methodName, List<dynamic> arguments) {
     ServicesBinding.instance!.defaultBinaryMessenger.handlePlatformMessage(
       SystemChannels.textInput.name,
@@ -23,13 +16,13 @@ class TextInputDriver {
 
   void type(String text) {
     final value = TextEditingValue(text: text);
-    _handlePlatformMessage('TextInputClient.updateEditingState',
-        <dynamic>[_clientId, value.toJSON()]);
+    _handlePlatformMessage(
+        'TextInputClient.updateEditingState', <dynamic>[-1, value.toJSON()]);
   }
 
   void keyboardAction(String type) {
     _handlePlatformMessage('TextInputClient.performAction',
-        <dynamic>[_clientId, submitTypes[type].toString()]);
+        <dynamic>[-1, submitTypes[type].toString()]);
   }
 
   Map<String, TextInputAction> get submitTypes => {
@@ -47,21 +40,4 @@ class TextInputDriver {
         'send': TextInputAction.send,
         'unspecified': TextInputAction.unspecified,
       };
-
-  Future<dynamic> _handler(MethodCall methodCall) async {
-    ui.window.sendPlatformMessage(
-      SystemChannels.textInput.name,
-      SystemChannels.textInput.codec.encodeMethodCall(methodCall),
-      (ByteData? data) {},
-    );
-
-    switch (methodCall.method) {
-      case 'TextInput.setClient':
-        _clientId = methodCall.arguments[0];
-        break;
-      case 'TextInput.clearClient':
-        _clientId = 0;
-        break;
-    }
-  }
 }

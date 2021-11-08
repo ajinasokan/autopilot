@@ -111,7 +111,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 setState(() {});
               },
               child: Text("Reset"),
-            )
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                onSubmitted: (val) {
+                  print("submitted $val");
+                },
+              ),
+            ),
           ],
         ),
       ),
