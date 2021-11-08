@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart' show TestGesture;
-import 'text_input.dart';
 
 part 'autopilot.dart';
 
@@ -55,8 +54,6 @@ class AutopilotAction {
 }
 
 class _Driver {
-  var _textInputDriver = TextInputDriver();
-
   _Driver({
     required String host,
     required int port,
@@ -107,20 +104,37 @@ class _Driver {
   Future<void> _keyboard(AutopilotAction action) async {
     if (action.request.method == "GET") {
       SystemChannels.textInput.invokeMethod("TextInput.show");
+      action.sendSuccess();
     } else if (action.request.method == "DELETE") {
       SystemChannels.textInput.invokeMethod("TextInput.hide");
+      action.sendSuccess();
     } else if (action.request.method == "POST") {
       _handleKeyboardAction(action);
     }
-    action.sendSuccess();
   }
 
+  Map<String, TextInputAction> get submitTypes => {
+        'continueAction': TextInputAction.continueAction,
+        'done': TextInputAction.done,
+        'emergencyCall': TextInputAction.emergencyCall,
+        'go': TextInputAction.go,
+        'join': TextInputAction.join,
+        'newline': TextInputAction.newline,
+        'next': TextInputAction.next,
+        'none': TextInputAction.none,
+        'previous': TextInputAction.previous,
+        'route': TextInputAction.route,
+        'search': TextInputAction.search,
+        'send': TextInputAction.send,
+        'unspecified': TextInputAction.unspecified,
+      };
+
   String get _acceptableValuesMsg =>
-      'Acceptable values are: [${_textInputDriver.submitTypes.keys.join(', ')}]';
+      'Acceptable values are: [${submitTypes.keys.join(', ')}]';
 
   Future<void> _handleKeyboardAction(AutopilotAction action) async {
     final params = action.request.uri.queryParameters;
-    final acceptableTypes = _textInputDriver.submitTypes.keys;
+    final acceptableTypes = submitTypes.keys;
     final type = params['type'];
     if (type == null || !acceptableTypes.contains(type)) {
       action.sendError(
@@ -130,7 +144,34 @@ class _Driver {
       return;
     }
 
-    _textInputDriver.keyboardAction(type);
+    final renderElement = WidgetsBinding.instance?.renderViewElement;
+    bool success = false;
+    void visit(Element? element) {
+      if (element!.widget is EditableText) {
+        final et = element.widget as EditableText;
+        if (et.focusNode.hasFocus) {
+          final se = element as StatefulElement;
+          final es = se.state as EditableTextState;
+          es.performAction(submitTypes[type]!);
+
+          success = true;
+          return;
+        }
+      }
+
+      element.visitChildren(visit);
+    }
+
+    visit(renderElement);
+
+    if (success) {
+      action.sendSuccess();
+    } else {
+      action.sendError(
+        Exception("No text field is in focus"),
+        StackTrace.current,
+      );
+    }
   }
 
   Future<void> _getWidgets(AutopilotAction action) async {
@@ -206,8 +247,32 @@ class _Driver {
 
   Future<void> _doType(AutopilotAction action) async {
     var text = action.request.uri.queryParameters["text"]!;
-    _textInputDriver.type(text);
-    action.sendSuccess();
+
+    final renderElement = WidgetsBinding.instance?.renderViewElement;
+    bool success = false;
+    void visit(Element? element) {
+      if (element!.widget is EditableText) {
+        final et = element.widget as EditableText;
+        if (et.focusNode.hasFocus) {
+          et.controller.value = TextEditingValue(text: text);
+          success = true;
+          return;
+        }
+      }
+
+      element.visitChildren(visit);
+    }
+
+    visit(renderElement);
+
+    if (success) {
+      action.sendSuccess();
+    } else {
+      action.sendError(
+        Exception("No text field is in focus"),
+        StackTrace.current,
+      );
+    }
   }
 
   TestGesture _createGesture() {
