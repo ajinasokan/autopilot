@@ -144,27 +144,10 @@ class _Driver {
       return;
     }
 
-    final renderElement = WidgetsBinding.instance?.renderViewElement;
-    bool success = false;
-    void visit(Element? element) {
-      if (element!.widget is EditableText) {
-        final et = element.widget as EditableText;
-        if (et.focusNode.hasFocus) {
-          final se = element as StatefulElement;
-          final es = se.state as EditableTextState;
-          es.performAction(submitTypes[type]!);
+    final editable = focusedEditable();
 
-          success = true;
-          return;
-        }
-      }
-
-      element.visitChildren(visit);
-    }
-
-    visit(renderElement);
-
-    if (success) {
+    if (editable != null) {
+      editable.performAction(submitTypes[type]!);
       action.sendSuccess();
     } else {
       action.sendError(
@@ -245,17 +228,16 @@ class _Driver {
     action.response.close();
   }
 
-  Future<void> _doType(AutopilotAction action) async {
-    var text = action.request.uri.queryParameters["text"]!;
-
+  EditableTextState? focusedEditable() {
     final renderElement = WidgetsBinding.instance?.renderViewElement;
-    bool success = false;
+
+    EditableTextState? res;
     void visit(Element? element) {
       if (element!.widget is EditableText) {
         final et = element.widget as EditableText;
         if (et.focusNode.hasFocus) {
-          et.controller.value = TextEditingValue(text: text);
-          success = true;
+          final se = element as StatefulElement;
+          res = se.state as EditableTextState;
           return;
         }
       }
@@ -265,7 +247,16 @@ class _Driver {
 
     visit(renderElement);
 
-    if (success) {
+    return res;
+  }
+
+  Future<void> _doType(AutopilotAction action) async {
+    var text = action.request.uri.queryParameters["text"]!;
+
+    final editable = focusedEditable();
+
+    if (editable != null) {
+      editable.updateEditingValue(TextEditingValue(text: text));
       action.sendSuccess();
     } else {
       action.sendError(

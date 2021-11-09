@@ -115,6 +115,9 @@ class _MyHomePageState extends State<MyHomePage> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                onChanged: (val) {
+                  print("changed $val");
+                },
                 onSubmitted: (val) {
                   print("submitted $val");
                 },
