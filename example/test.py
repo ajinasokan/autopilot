@@ -15,8 +15,14 @@ def test_increment():
     txtCount = get("/texts?key=txtCount")[0]
     assert txtCount["text"] == "0"
 
-    get("/tap?text=")  # "+" icon text
+    get("/tap?key=increment_key1")  
+    time.sleep(0.1)
+
+    get("/tap?key=increment_key1")  
+    time.sleep(0.1)
+
+    get("/tap?key=increment_key1")  
     time.sleep(0.1)
 
     txtCount = get("/texts?key=txtCount")[0]
-    assert txtCount["text"] == "1"
+    assert txtCount["text"] == "3"

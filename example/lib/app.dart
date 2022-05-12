@@ -111,6 +111,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 setState(() {});
               },
               child: Text("Reset"),
+            ),
+            TextButton(
+              key: Key("increment_key1"),
+              onPressed: _incrementCounter,
+              child: Text(
+                "increment_btn",
+              ),
             )
           ],
         ),
