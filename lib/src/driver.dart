@@ -1,14 +1,15 @@
-import 'dart:ui' as ui;
-import 'dart:typed_data';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:collection/collection.dart' show IterableExtension;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart' show TestGesture;
+
 import 'text_input.dart';
 
 part 'autopilot.dart';
@@ -431,7 +432,7 @@ class _Driver {
             "left": pos.dx,
             "top": pos.dy,
           },
-          "text": n.text!.text,
+          "text": n.text!,
         });
       }
 

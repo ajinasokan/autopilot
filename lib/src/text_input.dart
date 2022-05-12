@@ -5,7 +5,7 @@ class TextInputDriver {
   int? _clientId = 0;
 
   void init() {
-    SystemChannels.textInput.setMockMethodCallHandler(_handler);
+    SystemChannels.textInput.setMethodCallHandler(_handler);
   }
 
   void _handlePlatformMessage(String methodName, List<dynamic> arguments) {
