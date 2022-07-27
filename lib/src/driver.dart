@@ -6,7 +6,6 @@ import 'package:collection/collection.dart' show IterableExtension;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart' show TestGesture;
 
@@ -212,9 +211,9 @@ class _Driver {
   }
 
   Future<void> _getScreenshot(AutopilotAction action) async {
-    final RenderView renderElement = WidgetsBinding.instance!.renderView;
+    final RenderView renderElement = WidgetsBinding.instance.renderView;
     OffsetLayer layer = renderElement.layer as OffsetLayer;
-    var pixelRatio = WidgetsBinding.instance!.window.devicePixelRatio;
+    var pixelRatio = WidgetsBinding.instance.window.devicePixelRatio;
     var pixelSize = renderElement.size * pixelRatio;
     ui.Image image = await layer.toImage(
       layer.offset & pixelSize,
@@ -229,7 +228,7 @@ class _Driver {
   }
 
   EditableTextState? focusedEditable() {
-    final renderElement = WidgetsBinding.instance?.renderViewElement;
+    final renderElement = WidgetsBinding.instance.renderViewElement;
 
     EditableTextState? res;
     void visit(Element? element) {
@@ -269,7 +268,7 @@ class _Driver {
   TestGesture _createGesture() {
     return TestGesture(
       dispatcher: (PointerEvent event) async {
-        RendererBinding.instance!.handlePointerEvent(event);
+        RendererBinding.instance.handlePointerEvent(event);
       },
     );
   }
@@ -431,7 +430,7 @@ class _Driver {
   }
 
   Map<String, dynamic> _serializeTree() {
-    final renderElement = WidgetsBinding.instance?.renderViewElement;
+    final renderElement = WidgetsBinding.instance.renderViewElement;
 
     List<Map<String, dynamic>> texts = [];
     List<Map<String, dynamic>> editables = [];
