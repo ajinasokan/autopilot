@@ -1,3 +1,8 @@
+## 0.2.0
+
+* Flutter 2.5 support
+* Better handling of text inputs
+
 ## 0.1.0
 
 * Migrated to null safety

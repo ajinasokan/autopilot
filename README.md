@@ -4,18 +4,10 @@ A test driver for Flutter to do QA testing without sharing app source code. It e
 
 ## Getting started
 
-Add [package](https://pub.dev/packages/autopilot) to pubspec:
+Add [package](https://pub.dev/packages/autopilot) to dependencies:
 
 ```
-dependencies:
-  autopilot: ^0.0.2
-```
-
-For null safe version:
-
-```
-dependencies:
-  autopilot: ^0.1.0
+flutter pub add autopilot
 ```
 
 Create `main_test.dart` along side of your `main.dart` file. Make AutoPilot widget parent of your MaterialApp or root widget like below:
