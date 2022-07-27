@@ -1,3 +1,7 @@
+## 0.3.0
+
+* Flutter 3.0 changes
+
 ## 0.2.0
 
 * Flutter 2.5 support

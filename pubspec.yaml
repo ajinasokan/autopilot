@@ -1,6 +1,6 @@
 name: autopilot
 description: A test driver for Flutter to do QA testing without sharing app source code.
-version: 0.2.0
+version: 0.3.0
 homepage: https://github.com/ajinasokan/autopilot
 
 environment:
