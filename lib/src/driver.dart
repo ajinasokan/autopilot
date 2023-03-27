@@ -67,6 +67,8 @@ class _Driver {
       '/tap': _doTap,
       '/hold': _doHold,
       '/drag': _doDrag,
+      '/scroll': _doScroll,
+      '/scroll-into': _doScrollInto,
       '/screenshot': _getScreenshot,
       '/keyboard': _keyboard,
       ...extraHandlers,
@@ -340,17 +342,105 @@ class _Driver {
   }
 
   Future<void> _doDrag(AutopilotAction action) async {
-    final gesture = _createGesture();
-
-    await gesture.down(Offset(
+    await _drag(
       double.parse(action.request.uri.queryParameters["x"]!),
       double.parse(action.request.uri.queryParameters["y"]!),
-    ));
-
-    var offset = Offset(
       double.parse(action.request.uri.queryParameters["dx"]!),
       double.parse(action.request.uri.queryParameters["dy"]!),
     );
+
+    await action.sendSuccess();
+  }
+
+  Future<void> _doScroll(AutopilotAction action) async {
+    final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+    final widget = keys.firstWhereOrNull(
+      (info) => info["key"] == action.request.uri.queryParameters["key"],
+    );
+    if (widget == null) {
+      action.sendError(
+        Exception("Given key doesn't exist."),
+        StackTrace.current,
+      );
+    } else {
+      await _drag(
+        widget["position"]["left"],
+        widget["position"]["top"],
+        double.parse(action.request.uri.queryParameters["dx"]!),
+        double.parse(action.request.uri.queryParameters["dy"]!),
+      );
+
+      await action.sendSuccess();
+    }
+  }
+
+  Future<void> _doScrollInto(AutopilotAction action) async {
+    final params = action.request.uri.queryParameters;
+
+    // check if scrollable-key exists
+    final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+    final widget = keys.firstWhereOrNull(
+      (info) => info["key"] == params["scrollable-key"],
+    );
+    if (widget == null) {
+      await action.sendError(
+        Exception("Given container-key doesn't exist."),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    // timeout params
+    int start = DateTime.now().millisecondsSinceEpoch;
+    int timeout = int.tryParse("${params["timeout"]}") ?? 5000;
+    int delay = int.tryParse("${params["delay"]}") ?? 500;
+
+    while (true) {
+      // drag by (dx,dy)
+      await _drag(
+        widget["position"]["left"],
+        widget["position"]["top"],
+        double.parse(action.request.uri.queryParameters["dx"]!),
+        double.parse(action.request.uri.queryParameters["dy"]!),
+      );
+
+      // wait for delay
+      await Future.delayed(Duration(milliseconds: delay));
+
+      // check if key exists
+      final newKeys = _serializeTree(includeElement: true)["keys"]
+          as List<Map<String, dynamic>>;
+      final keyWidget = newKeys.firstWhereOrNull(
+        (info) => info["key"] == params["key"],
+      );
+      if (keyWidget != null) {
+        // ensure the widget is visible
+        await Scrollable.ensureVisible(keyWidget["element"] as BuildContext);
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          action.sendSuccess();
+        });
+
+        return;
+      }
+
+      // check if we are out of time
+      if (DateTime.now().millisecondsSinceEpoch >= start + timeout) {
+        await action.sendError(
+          Exception("Operation timed out."),
+          StackTrace.current,
+        );
+        return;
+      }
+    }
+  }
+
+  Future<void> _drag(double x, double y, double dx, double dy) async {
+    final gesture = _createGesture();
+
+    await gesture.down(Offset(x, y));
+
+    var offset = Offset(dx, dy);
     final double touchSlopX = 20.0;
     final double touchSlopY = 20.0;
 
@@ -426,10 +516,9 @@ class _Driver {
       await gesture.moveBy(offset);
     }
     await gesture.up();
-    action.sendSuccess();
   }
 
-  Map<String, dynamic> _serializeTree() {
+  Map<String, dynamic> _serializeTree({bool includeElement = false}) {
     final renderElement = WidgetsBinding.instance.renderViewElement;
 
     List<Map<String, dynamic>> texts = [];
@@ -444,6 +533,10 @@ class _Driver {
         "widget": element.widget.runtimeType.toString(),
         "render": node.toDescription(),
       };
+
+      if (includeElement) {
+        out["element"] = element;
+      }
 
       if (node.value is TextSpan) {
         out["text"] = (node.value as TextSpan).text;

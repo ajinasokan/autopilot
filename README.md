@@ -124,6 +124,18 @@ Tap and hold on given offset
 
 Taps at (x,y) and drags (dx, dy) offset
 
+**GET /scroll?key=&lt;key of scrollable&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;**
+
+Taps inside scrollable with given key and drags (dx, dy) offset
+
+**GET /scroll-into?scrollable-key=&lt;key of scrollable&gt;&key=&lt;key of widget&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;&delay=&lt;delay between drags in ms&gt;&timeout=&lt;timeout in ms&gt;**
+
+Taps inside widget with given `scrollable-key` and drags (dx, dy) offset until given `key` is present in the widget tree. If the widget is inside a scrollable it will be made visible.
+
+After one drag action it will pause for `delay` milliseconds and then check for the `key`. Default value is 500 ms.
+
+Operation times out after `timeout` milliseconds. Default value is 5000 ms.
+
 **GET /screenshot**
 
 Returns screenshot of app in PNG
