@@ -1,3 +1,7 @@
+## 0.3.1
+
+* Add /scroll and /scroll-into APIs
+
 ## 0.3.0
 
 * Flutter 3.0 changes
