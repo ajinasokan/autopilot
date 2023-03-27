@@ -1,5 +1,4 @@
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'dart:io';
 import 'dart:convert';
 import 'package:collection/collection.dart' show IterableExtension;
@@ -214,6 +213,7 @@ class _Driver {
 
   Future<void> _getScreenshot(AutopilotAction action) async {
     final RenderView renderElement = WidgetsBinding.instance.renderView;
+    // ignore: invalid_use_of_protected_member
     OffsetLayer layer = renderElement.layer as OffsetLayer;
     var pixelRatio = WidgetsBinding.instance.window.devicePixelRatio;
     var pixelSize = renderElement.size * pixelRatio;
