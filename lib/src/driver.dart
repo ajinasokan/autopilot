@@ -298,6 +298,11 @@ class _Driver {
       } else {
         x = widget["position"]["left"];
         y = widget["position"]["top"];
+
+        if (params["center"] == "true") {
+          x = widget["position"]["left"] + widget["size"]["width"] / 2;
+          y = widget["position"]["top"] + widget["size"]["height"] / 2;
+        }
       }
     } else if (params.containsKey("text")) {
       final texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
@@ -313,6 +318,11 @@ class _Driver {
       } else {
         x = widget["position"]["left"];
         y = widget["position"]["top"];
+
+        if (params["center"] == "true") {
+          x = widget["position"]["left"] + widget["size"]["width"] / 2;
+          y = widget["position"]["top"] + widget["size"]["height"] / 2;
+        }
       }
     }
 
