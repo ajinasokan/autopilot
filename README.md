@@ -1,3 +1,5 @@
+<a href="https://zerodha.tech"><img src="https://zerodha.tech/static/images/github-badge.svg" align="right" /></a>
+
 # Autopilot
 
 A test driver for Flutter to do QA testing without sharing app source code. It exposes a JSON API using an HTTP server running inside the app. Using these APIs you can write tests in any language for your Flutter app.
