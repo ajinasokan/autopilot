@@ -603,8 +603,8 @@ class _Driver {
         };
         var pos = n.localToGlobal(Offset.zero);
         out["position"] = {
-          "left": pos.dx,
-          "top": pos.dy,
+          "left": pos.dx.isNaN ? 0 : pos.dx,
+          "top": pos.dy.isNaN ? 0 : pos.dy,
         };
       }
 
