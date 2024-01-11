@@ -566,8 +566,8 @@ class _Driver {
             };
             var pos = n.localToGlobal(Offset.zero);
             textInfo["position"] = {
-              "left": pos.dx,
-              "top": pos.dy,
+              "left": pos.dx.isNaN ? 0 : pos.dx,
+              "top": pos.dy.isNaN ? 0 : pos.dy,
             };
             out["text"] = textInfo;
             texts.add(textInfo);
@@ -588,8 +588,8 @@ class _Driver {
             "width": n.size.width,
           },
           "position": {
-            "left": pos.dx,
-            "top": pos.dy,
+            "left": pos.dx.isNaN ? 0 : pos.dx,
+            "top": pos.dy.isNaN ? 0 : pos.dy,
           },
           "text": text,
         });
