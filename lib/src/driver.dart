@@ -539,6 +539,13 @@ class _Driver {
       if (element == null) return null;
       var node = element.renderObject!.toDiagnosticsNode();
 
+      // tree sometimes has elements are not visible
+      // their positions are NaN and not usable for testing. ignoring them.
+      if (node.value is RenderBox &&
+          !(node.value as RenderBox).localToGlobal(Offset.zero).isFinite) {
+        return null;
+      }
+
       Map<String, Object?> out = {
         "widget": element.widget.runtimeType.toString(),
         "render": node.toDescription(),
