@@ -599,6 +599,7 @@ class _Driver {
             "top": pos.dy,
           },
           "text": text,
+          "plain_text": n.plainText,
         });
       }
 
