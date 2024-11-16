@@ -563,7 +563,8 @@ class _Driver {
         var n = node.value as RenderParagraph?;
         node.getChildren().forEach((subnode) {
           if (subnode.value is TextSpan) {
-            var text = (subnode.value as TextSpan).toPlainText();
+            var textNode = (subnode.value as TextSpan);
+            var text = textNode.toPlainText();
             var textInfo = <String, dynamic>{
               "text": text,
             };
@@ -575,6 +576,10 @@ class _Driver {
             textInfo["position"] = {
               "left": pos.dx,
               "top": pos.dy,
+            };
+            textInfo["style"] = {
+              "color" :textNode.style!.color!.value.toRadixString(16),
+              "fontSize" :textNode.style?.fontSize
             };
             out["text"] = textInfo;
             texts.add(textInfo);
