@@ -578,8 +578,8 @@ class _Driver {
               "top": pos.dy,
             };
             textInfo["style"] = {
-              "color" :textNode.style!.color!.value.toRadixString(16),
-              "fontSize" :textNode.style?.fontSize
+              "color": textNode.style?.color?.value.toRadixString(16),
+              "fontSize": textNode.style?.fontSize
             };
             out["text"] = textInfo;
             texts.add(textInfo);
