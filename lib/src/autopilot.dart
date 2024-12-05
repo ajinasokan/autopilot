@@ -45,21 +45,22 @@ class _AutopilotState extends State<Autopilot> {
             bottom: 0,
             left: 0,
             right: 0,
-            child: IgnorePointer(
-              ignoring: true,
-              ignoringSemantics: true,
-              child: Container(
-                height: 20,
-                color: Colors.red.withAlpha(180),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(2.0),
-                    child: Text(
-                      "Driven by Autopilot",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        decoration: TextDecoration.none,
+            child: ExcludeSemantics(
+              child: IgnorePointer(
+                ignoring: true,
+                child: Container(
+                  height: 20,
+                  color: Colors.red.withAlpha(180),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(2.0),
+                      child: Text(
+                        "Driven by Autopilot",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                   ),

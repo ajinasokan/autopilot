@@ -212,10 +212,10 @@ class _Driver {
   }
 
   Future<void> _getScreenshot(AutopilotAction action) async {
-    final RenderView renderElement = WidgetsBinding.instance.renderView;
+    final RenderView renderElement = WidgetsBinding.instance.renderViews.first;
     // ignore: invalid_use_of_protected_member
     OffsetLayer layer = renderElement.layer as OffsetLayer;
-    var pixelRatio = WidgetsBinding.instance.window.devicePixelRatio;
+    var pixelRatio = renderElement.configuration.devicePixelRatio;
     var pixelSize = renderElement.size * pixelRatio;
     ui.Image image = await layer.toImage(
       layer.offset & pixelSize,
@@ -230,7 +230,7 @@ class _Driver {
   }
 
   EditableTextState? focusedEditable() {
-    final renderElement = WidgetsBinding.instance.renderViewElement;
+    final renderElement = WidgetsBinding.instance.rootElement;
 
     EditableTextState? res;
     void visit(Element? element) {
@@ -529,7 +529,7 @@ class _Driver {
   }
 
   Map<String, dynamic> _serializeTree({bool includeElement = false}) {
-    final renderElement = WidgetsBinding.instance.renderViewElement;
+    final renderElement = WidgetsBinding.instance.rootElement;
 
     List<Map<String, dynamic>> texts = [];
     List<Map<String, dynamic>> editables = [];
