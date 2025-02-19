@@ -1,3 +1,10 @@
+## 0.4.0
+
+* API to tap on center of widget. Call `/tap?.....&center=true`
+* Ignore elements with NaN positions
+* Sending content of text fields as `plain_text` in `/editables`
+* Sending text style as `style` in `/texts`. Thanks @akshayherle11.
+
 ## 0.3.1
 
 * Add /scroll and /scroll-into APIs
