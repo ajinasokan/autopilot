@@ -112,11 +112,11 @@ Taps at given offset
 
 **GET /tap?key=&lt;key&gt;**
 
-Taps on widget with given key
+Taps on widget with given key. Send `center=true` to tap at center of the widget.
 
 **GET /tap?text=&lt;text&gt;**
 
-Taps on text widget with given text
+Taps on text widget with given text. Send `center=true` to tap at center of the widget.
 
 **GET /hold?x=&lt;x&gt;&y=&lt;y&gt;**
 
