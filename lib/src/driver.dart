@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:io';
 import 'dart:convert';
 import 'package:collection/collection.dart' show IterableExtension;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
@@ -550,6 +551,16 @@ class _Driver {
         "widget": element.widget.runtimeType.toString(),
         "render": node.toDescription(),
       };
+
+      if (element.widget is CupertinoSwitch) {
+        out["value"] = (element.widget as CupertinoSwitch).value;
+      } else if (element.widget is Switch) {
+        out["value"] = (element.widget as Switch).value;
+      } else if (element.widget is Checkbox) {
+        out["value"] = (element.widget as Checkbox).value;
+      } else if (element.widget is Radio) {
+        out["value"] = (element.widget as Radio).value;
+      }
 
       if (includeElement) {
         out["element"] = element;

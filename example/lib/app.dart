@@ -43,6 +43,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  bool value = true;
 
   void _incrementCounter() {
     setState(() {
@@ -124,6 +125,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 print("submitted $val");
               },
             ),
+          ),
+          Switch(
+            key: Key("switch"),
+            onChanged: (v) {
+              value = v;
+              setState(() {});
+            },
+            value: value,
           ),
           Expanded(
             child: ListView.builder(
