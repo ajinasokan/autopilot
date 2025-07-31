@@ -159,7 +159,8 @@ class _Driver {
   }
 
   Future<void> _getWidgets(AutopilotAction action) async {
-    final widgetTree = _serializeTree()["tree"];
+    final params = action.request.uri.queryParameters;
+    final widgetTree = _serializeTree(parent: params['parent'])["tree"];
 
     if (widgetTree == null) {
       action.sendError(
@@ -172,15 +173,16 @@ class _Driver {
   }
 
   Future<void> _getKeys(AutopilotAction action) async {
-    final keys = _serializeTree()["keys"];
+    final params = action.request.uri.queryParameters;
+    final keys = _serializeTree(parent: params['parent'])["keys"];
     action.writeResponse(
       body: keys,
     );
   }
 
   Future<void> _getTexts(AutopilotAction action) async {
-    final serialized = _serializeTree();
     final params = action.request.uri.queryParameters;
+    final serialized = _serializeTree(parent: params['parent']);
 
     var texts = serialized["texts"] as List<Map<String, dynamic>>?;
     if (params.containsKey("text")) {
@@ -206,7 +208,8 @@ class _Driver {
   }
 
   Future<void> _getEditables(AutopilotAction action) async {
-    final texts = _serializeTree()["editables"];
+    final params = action.request.uri.queryParameters;
+    final texts = _serializeTree(parent: params['parent'])["editables"];
     action.writeResponse(
       body: texts,
     );
@@ -286,7 +289,8 @@ class _Driver {
       x = double.parse(params["x"]!);
       y = double.parse(params["y"]!);
     } else if (params.containsKey("key")) {
-      final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+      final keys = _serializeTree(parent: params["parent"])["keys"]
+          as List<Map<String, dynamic>>;
       final widget = keys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
       );
@@ -306,7 +310,8 @@ class _Driver {
         }
       }
     } else if (params.containsKey("text")) {
-      final texts = _serializeTree()["texts"] as List<Map<String, dynamic>>;
+      final texts = _serializeTree(parent: params["parent"])["texts"]
+          as List<Map<String, dynamic>>;
       final widget = texts.firstWhereOrNull(
         (info) => info["text"] == params["text"],
       );
@@ -364,7 +369,9 @@ class _Driver {
   }
 
   Future<void> _doScroll(AutopilotAction action) async {
-    final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+    final params = action.request.uri.queryParameters;
+    final keys = _serializeTree(parent: params["parent"])["keys"]
+        as List<Map<String, dynamic>>;
     final widget = keys.firstWhereOrNull(
       (info) => info["key"] == action.request.uri.queryParameters["key"],
     );
@@ -389,7 +396,8 @@ class _Driver {
     final params = action.request.uri.queryParameters;
 
     // check if scrollable-key exists
-    final keys = _serializeTree()["keys"] as List<Map<String, dynamic>>;
+    final keys = _serializeTree(parent: params["parent"])["keys"]
+        as List<Map<String, dynamic>>;
     final widget = keys.firstWhereOrNull(
       (info) => info["key"] == params["scrollable-key"],
     );
@@ -529,12 +537,42 @@ class _Driver {
     await gesture.up();
   }
 
-  Map<String, dynamic> _serializeTree({bool includeElement = false}) {
+  Map<String, dynamic> _serializeTree({
+    bool includeElement = false,
+    String? parent,
+  }) {
     final renderElement = WidgetsBinding.instance.rootElement;
 
     List<Map<String, dynamic>> texts = [];
     List<Map<String, dynamic>> editables = [];
     List<Map<String, dynamic>> keys = [];
+
+    // If parent is specified, find the first element with matching widget type
+    Element? startElement = renderElement;
+    if (parent != null) {
+      Element? foundElement;
+
+      void findParentElement(Element element) {
+        if (element.widget.runtimeType.toString() == parent) {
+          foundElement ??= element; // Only set if not already found
+          return;
+        }
+        element.visitChildren(findParentElement);
+      }
+
+      findParentElement(renderElement!);
+      if (foundElement != null) {
+        startElement = foundElement;
+      } else {
+        // If no matching parent is found, return an empty tree
+        return {
+          "texts": texts,
+          "editables": editables,
+          "tree": {},
+          "keys": keys,
+        };
+      }
+    }
 
     Map<String, dynamic>? serialize(Element? element) {
       if (element == null) return null;
@@ -660,7 +698,7 @@ class _Driver {
       return out;
     }
 
-    final tree = serialize(renderElement);
+    final tree = serialize(startElement);
 
     return {
       "texts": texts,

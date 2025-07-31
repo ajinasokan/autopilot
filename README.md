@@ -78,65 +78,72 @@ But Flutter framework is so transparent I was able to tap into its internals and
 
 ## APIs
 
-**GET /widgets**
+**GET /widgets?parent=:widget_type**
 
-Returns entire widget tree
+Returns entire widget tree.
 
-**GET /keys**
+- `parent` (optional) - if provided, returns widget tree starting from the first widget of the specified type, otherwise considers the entire widget tree
 
-Returns list of all the keyed widgets
+**GET /keys?parent=:widget_type**
 
-**GET /texts**
+Returns list of all the keyed widgets.
 
-Returns list of all text widgets
+- `parent` (optional) - if provided, returns only keyed widgets within the specified parent widget type, otherwise considers the entire widget tree
 
-**GET /texts?text=&lt;text&gt;**
+**GET /texts?text=:text&key=:key&parent=:widget_type**
 
-Returns list of all text widgets with matching text
+Returns list of text widgets.
 
-**GET /texts?key=&lt;key&gt;**
+- `text` (optional) - filters widgets with matching text
+- `key` (optional) - returns widget that matches key
+- `parent` (optional) - if provided, searches only within the specified parent widget type, otherwise considers the entire widget tree
 
-Returns text widget that matches key
+**GET /editables?parent=:widget_type**
 
-**GET /editables**
+Returns list of all text fields.
 
-Returns list of all text fields
+- `parent` (optional) - if provided, returns only text fields within the specified parent widget type, otherwise considers the entire widget tree
 
-**GET /type?text=&lt;text&gt;**
+**GET /type?text=:text**
 
 Types given text to the focused text field
 
-**GET /tap?x=&lt;x&gt;&y=&lt;y&gt;**
+**GET /tap?x=:x&y=:y&key=:key&text=:text&center=:center&parent=:widget_type**
 
-Taps at given offset
+Taps on screen at an offset, a key or a text.
 
-**GET /tap?key=&lt;key&gt;**
+- `x`,`y` (optional) - taps at given offset
+- `key` (optional) - taps on widget with given key
+- `text` (optional) - taps on text widget with given text
+- `center` (optional) - set to `true` to tap at center of the widget
+- `parent` (optional) - if provided, searches only within the specified parent widget type, otherwise considers the entire widget tree
 
-Taps on widget with given key. Send `center=true` to tap at center of the widget.
-
-**GET /tap?text=&lt;text&gt;**
-
-Taps on text widget with given text. Send `center=true` to tap at center of the widget.
-
-**GET /hold?x=&lt;x&gt;&y=&lt;y&gt;**
+**GET /hold?x=:x&y=:y**
 
 Tap and hold on given offset
 
-**GET /drag?x=&lt;x&gt;&y=&lt;y&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;**
+**GET /drag?x=:x&y=:y&dx=:dx&dy=:dy**
 
 Taps at (x,y) and drags (dx, dy) offset
 
-**GET /scroll?key=&lt;key of scrollable&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;**
+**GET /scroll?key=:key&dx=:dx&dy=:dy&parent=:widget_type**
 
-Taps inside scrollable with given key and drags (dx, dy) offset
+Taps inside scrollable and drags.
 
-**GET /scroll-into?scrollable-key=&lt;key of scrollable&gt;&key=&lt;key of widget&gt;&dx=&lt;dx&gt;&dy=&lt;dy&gt;&delay=&lt;delay between drags in ms&gt;&timeout=&lt;timeout in ms&gt;**
+- `key` - key of scrollable widget
+- `dx`,`dy` - drag offset
+- `parent` (optional) - if provided, searches only within the specified parent widget type, otherwise considers the entire widget tree
 
-Taps inside widget with given `scrollable-key` and drags (dx, dy) offset until given `key` is present in the widget tree. If the widget is inside a scrollable it will be made visible.
+**GET /scroll-into?scrollable-key=:key&key=:key&dx=:dx&dy=:dy&delay=:delay&timeout=:timeout&parent=:widget_type**
 
-After one drag action it will pause for `delay` milliseconds and then check for the `key`. Default value is 500 ms.
+Scrolls until target widget becomes visible.
 
-Operation times out after `timeout` milliseconds. Default value is 5000 ms.
+- `scrollable-key` - key of scrollable widget
+- `key` - key of widget to scroll into view
+- `dx`,`dy` - drag offset
+- `delay` (optional) - milliseconds between drags (default: 500)
+- `timeout` (optional) - timeout in milliseconds (default: 5000)
+- `parent` (optional) - if provided, searches only within the specified parent widget type, otherwise considers the entire widget tree
 
 **GET /screenshot**
 
@@ -150,7 +157,7 @@ Shows keyboard
 
 Hides keyboard
 
-**POST /keyboard?type=&lt;type&gt;**
+**POST /keyboard?type=:type**
 
 Submits a keyboard action.
 
