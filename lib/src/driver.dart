@@ -692,6 +692,11 @@ class _Driver {
       out["children"] = children;
 
       element.visitChildren((node) {
+        // Skip children of Offstage widgets when offstage is true
+        if (element.widget is Offstage &&
+            (element.widget as Offstage).offstage) {
+          return;
+        }
         children.add(serialize(node));
       });
 
