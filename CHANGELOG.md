@@ -1,3 +1,8 @@
+## 0.5.0
+
+* MCP endpoint at `/mcp` so AI agents can drive the app. See README for setup.
+* Requires Flutter 3.38 / Dart 3.10 or newer
+
 ## 0.4.0
 
 * API to tap on center of widget. Call `/tap?.....&center=true`

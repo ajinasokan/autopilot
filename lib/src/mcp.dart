@@ -232,7 +232,7 @@ class _Mcp {
           ? requested
           : _protocolVersions.first,
       "capabilities": {"tools": {}},
-      "serverInfo": {"name": "autopilot", "version": "0.4.0"},
+      "serverInfo": {"name": "autopilot", "version": "0.5.0"},
       "instructions": _instructions,
     };
   }
