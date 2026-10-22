@@ -7,7 +7,8 @@ class Autopilot extends StatefulWidget {
   final Widget child;
   final bool hideBanner;
 
-  Autopilot({
+  const Autopilot({
+    super.key,
     this.host = "localhost",
     this.port = 8080,
     this.extraHandlers = const {},
@@ -16,11 +17,11 @@ class Autopilot extends StatefulWidget {
   });
 
   @override
-  _AutopilotState createState() => _AutopilotState();
+  State<Autopilot> createState() => _AutopilotState();
 }
 
 class _AutopilotState extends State<Autopilot> {
-  _Driver? driver;
+  late final _Driver driver;
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _AutopilotState extends State<Autopilot> {
     if (widget.hideBanner) return widget.child;
 
     return Directionality(
-      textDirection: TextDirection.ltr,
+      textDirection: .ltr,
       child: Stack(
         children: <Widget>[
           Positioned.fill(child: widget.child),
@@ -53,13 +54,13 @@ class _AutopilotState extends State<Autopilot> {
                   color: Colors.red.withAlpha(180),
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(2.0),
-                      child: Text(
+                      padding: const .all(2.0),
+                      child: const Text(
                         "Driven by Autopilot",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,
-                          decoration: TextDecoration.none,
+                          decoration: .none,
                         ),
                       ),
                     ),

@@ -3,5 +3,5 @@ import 'package:autopilot/autopilot.dart';
 import 'app.dart';
 
 void main() {
-  runApp(Autopilot(child: MyApp()));
+  runApp(const Autopilot(child: MyApp()));
 }

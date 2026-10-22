@@ -1,3 +1,3 @@
-library autopilot;
+library;
 
 export 'src/driver.dart';

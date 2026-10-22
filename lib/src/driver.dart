@@ -1,4 +1,4 @@
-import 'dart:ui' as ui;
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:collection/collection.dart' show IterableExtension;
@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart' show TestGesture;
 
 part 'autopilot.dart';
 
-typedef Future<void> Handler(AutopilotAction r);
+typedef Handler = Future<void> Function(AutopilotAction r);
 
 class AutopilotAction {
   final HttpRequest request;
@@ -23,26 +23,20 @@ class AutopilotAction {
   Future<void> sendError(dynamic e, StackTrace s) async {
     await writeResponse(
       status: 500,
-      body: {
-        "error": e.toString(),
-        "stacktrace": s.toString(),
-      },
+      body: {"error": e.toString(), "stacktrace": s.toString()},
     );
   }
 
   Future<void> sendSuccess() async {
-    await writeResponse(
-      body: {"status": "success"},
-    );
+    await writeResponse(body: {"status": "success"});
   }
 
-  Future<void> writeResponse({
-    int status = 200,
-    dynamic body,
-  }) async {
+  Future<void> writeResponse({int status = 200, dynamic body}) async {
     request.response.statusCode = status;
-    request.response.headers
-        .set("content-type", "application/json; charset=utf-8");
+    request.response.headers.set(
+      "content-type",
+      "application/json; charset=utf-8",
+    );
     request.response.write(_indentedJson(body));
     await request.response.close();
   }
@@ -74,22 +68,22 @@ class _Driver {
       ...extraHandlers,
     };
 
-    _handle(host, port, routes);
+    unawaited(_handle(host, port, routes));
   }
 
-  void _handle(
+  Future<void> _handle(
     String host,
     int port,
     Map<String, Handler> routes,
   ) async {
     final server = await HttpServer.bind(host, port);
 
-    await for (var request in server) {
+    await for (final request in server) {
       final handler = routes[request.uri.path];
       final action = AutopilotAction(request);
       try {
         if (handler == null) {
-          action.writeResponse(
+          await action.writeResponse(
             status: 404,
             body: {"error": "route not found"},
           );
@@ -97,61 +91,50 @@ class _Driver {
           await handler(action);
         }
       } catch (error, stackTrace) {
-        action.sendError(error, stackTrace);
+        await action.sendError(error, stackTrace);
       }
     }
   }
 
   Future<void> _keyboard(AutopilotAction action) async {
-    if (action.request.method == "GET") {
-      SystemChannels.textInput.invokeMethod("TextInput.show");
-      action.sendSuccess();
-    } else if (action.request.method == "DELETE") {
-      SystemChannels.textInput.invokeMethod("TextInput.hide");
-      action.sendSuccess();
-    } else if (action.request.method == "POST") {
-      _handleKeyboardAction(action);
+    switch (action.request.method) {
+      case "GET":
+        await SystemChannels.textInput.invokeMethod("TextInput.show");
+        await action.sendSuccess();
+      case "DELETE":
+        await SystemChannels.textInput.invokeMethod("TextInput.hide");
+        await action.sendSuccess();
+      case "POST":
+        await _handleKeyboardAction(action);
     }
   }
 
-  Map<String, TextInputAction> get submitTypes => {
-        'continueAction': TextInputAction.continueAction,
-        'done': TextInputAction.done,
-        'emergencyCall': TextInputAction.emergencyCall,
-        'go': TextInputAction.go,
-        'join': TextInputAction.join,
-        'newline': TextInputAction.newline,
-        'next': TextInputAction.next,
-        'none': TextInputAction.none,
-        'previous': TextInputAction.previous,
-        'route': TextInputAction.route,
-        'search': TextInputAction.search,
-        'send': TextInputAction.send,
-        'unspecified': TextInputAction.unspecified,
-      };
+  Map<String, TextInputAction> get submitTypes =>
+      TextInputAction.values.asNameMap();
 
   String get _acceptableValuesMsg =>
       'Acceptable values are: [${submitTypes.keys.join(', ')}]';
 
   Future<void> _handleKeyboardAction(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
-    final acceptableTypes = submitTypes.keys;
-    final type = params['type'];
-    if (type == null || !acceptableTypes.contains(type)) {
-      action.sendError(
-          Exception(
-              "Type '$type' is not an available action. $_acceptableValuesMsg"),
-          StackTrace.current);
+    final type = action.request.uri.queryParameters['type'];
+    final inputAction = submitTypes[type];
+    if (inputAction == null) {
+      await action.sendError(
+        Exception(
+          "Type '$type' is not an available action. $_acceptableValuesMsg",
+        ),
+        StackTrace.current,
+      );
       return;
     }
 
     final editable = focusedEditable();
 
     if (editable != null) {
-      editable.performAction(submitTypes[type]!);
-      action.sendSuccess();
+      editable.performAction(inputAction);
+      await action.sendSuccess();
     } else {
-      action.sendError(
+      await action.sendError(
         Exception("No text field is in focus"),
         StackTrace.current,
       );
@@ -163,21 +146,19 @@ class _Driver {
     final widgetTree = _serializeTree(parent: params['parent'])["tree"];
 
     if (widgetTree == null) {
-      action.sendError(
-          Exception("Render tree unavailable"), StackTrace.current);
-    } else {
-      action.writeResponse(
-        body: widgetTree,
+      await action.sendError(
+        Exception("Render tree unavailable"),
+        StackTrace.current,
       );
+    } else {
+      await action.writeResponse(body: widgetTree);
     }
   }
 
   Future<void> _getKeys(AutopilotAction action) async {
     final params = action.request.uri.queryParameters;
     final keys = _serializeTree(parent: params['parent'])["keys"];
-    action.writeResponse(
-      body: keys,
-    );
+    await action.writeResponse(body: keys);
   }
 
   Future<void> _getTexts(AutopilotAction action) async {
@@ -202,55 +183,47 @@ class _Driver {
         texts = [];
       }
     }
-    action.writeResponse(
-      body: texts,
-    );
+    await action.writeResponse(body: texts);
   }
 
   Future<void> _getEditables(AutopilotAction action) async {
     final params = action.request.uri.queryParameters;
     final texts = _serializeTree(parent: params['parent'])["editables"];
-    action.writeResponse(
-      body: texts,
-    );
+    await action.writeResponse(body: texts);
   }
 
   Future<void> _getScreenshot(AutopilotAction action) async {
-    final RenderView renderElement = WidgetsBinding.instance.renderViews.first;
+    final renderView = WidgetsBinding.instance.renderViews.first;
     // ignore: invalid_use_of_protected_member
-    OffsetLayer layer = renderElement.layer as OffsetLayer;
-    var pixelRatio = renderElement.configuration.devicePixelRatio;
-    var pixelSize = renderElement.size * pixelRatio;
-    ui.Image image = await layer.toImage(
-      layer.offset & pixelSize,
-    );
+    final layer = renderView.layer as OffsetLayer;
+    final pixelRatio = renderView.configuration.devicePixelRatio;
+    final pixelSize = renderView.size * pixelRatio;
+    final image = await layer.toImage(layer.offset & pixelSize);
 
-    ByteData byteData =
-        (await image.toByteData(format: ui.ImageByteFormat.png))!;
-    Uint8List pngBytes = byteData.buffer.asUint8List();
+    final byteData = (await image.toByteData(format: .png))!;
+    final pngBytes = byteData.buffer.asUint8List();
     action.response.headers.set("content-type", "image/png");
     action.response.add(pngBytes);
-    action.response.close();
+    await action.response.close();
   }
 
   EditableTextState? focusedEditable() {
-    final renderElement = WidgetsBinding.instance.rootElement;
+    final rootElement = WidgetsBinding.instance.rootElement;
 
     EditableTextState? res;
-    void visit(Element? element) {
-      if (element!.widget is EditableText) {
-        final et = element.widget as EditableText;
-        if (et.focusNode.hasFocus) {
-          final se = element as StatefulElement;
-          res = se.state as EditableTextState;
-          return;
-        }
+    void visit(Element element) {
+      if (element case StatefulElement(
+        widget: EditableText(:final focusNode),
+        state: final EditableTextState state,
+      ) when focusNode.hasFocus) {
+        res = state;
+        return;
       }
 
       element.visitChildren(visit);
     }
 
-    visit(renderElement);
+    if (rootElement != null) visit(rootElement);
 
     return res;
   }
@@ -262,9 +235,9 @@ class _Driver {
 
     if (editable != null) {
       editable.updateEditingValue(TextEditingValue(text: text));
-      action.sendSuccess();
+      await action.sendSuccess();
     } else {
-      action.sendError(
+      await action.sendError(
         Exception("No text field is in focus"),
         StackTrace.current,
       );
@@ -289,13 +262,14 @@ class _Driver {
       x = double.parse(params["x"]!);
       y = double.parse(params["y"]!);
     } else if (params.containsKey("key")) {
-      final keys = _serializeTree(parent: params["parent"])["keys"]
-          as List<Map<String, dynamic>>;
+      final keys =
+          _serializeTree(parent: params["parent"])["keys"]
+              as List<Map<String, dynamic>>;
       final widget = keys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
       );
       if (widget == null) {
-        action.sendError(
+        await action.sendError(
           Exception("Given key doesn't exist."),
           StackTrace.current,
         );
@@ -310,13 +284,14 @@ class _Driver {
         }
       }
     } else if (params.containsKey("text")) {
-      final texts = _serializeTree(parent: params["parent"])["texts"]
-          as List<Map<String, dynamic>>;
+      final texts =
+          _serializeTree(parent: params["parent"])["texts"]
+              as List<Map<String, dynamic>>;
       final widget = texts.firstWhereOrNull(
         (info) => info["text"] == params["text"],
       );
       if (widget == null) {
-        action.sendError(
+        await action.sendError(
           Exception("Given text doesn't exist."),
           StackTrace.current,
         );
@@ -333,7 +308,7 @@ class _Driver {
     }
 
     if (x == null || y == null) {
-      action.sendError(
+      await action.sendError(
         Exception("Unable to get x & y points. Validate your params."),
         StackTrace.current,
       );
@@ -342,19 +317,21 @@ class _Driver {
 
     await gesture.down(Offset(x, y));
     await gesture.up();
-    action.sendSuccess();
+    await action.sendSuccess();
   }
 
   Future<void> _doHold(AutopilotAction action) async {
     final gesture = _createGesture();
 
-    await gesture.down(Offset(
-      double.parse(action.request.uri.queryParameters["x"]!),
-      double.parse(action.request.uri.queryParameters["y"]!),
-    ));
-    await Future.delayed(Duration(milliseconds: 500));
+    await gesture.down(
+      Offset(
+        double.parse(action.request.uri.queryParameters["x"]!),
+        double.parse(action.request.uri.queryParameters["y"]!),
+      ),
+    );
+    await Future.delayed(const Duration(milliseconds: 500));
     await gesture.up();
-    action.sendSuccess();
+    await action.sendSuccess();
   }
 
   Future<void> _doDrag(AutopilotAction action) async {
@@ -370,13 +347,14 @@ class _Driver {
 
   Future<void> _doScroll(AutopilotAction action) async {
     final params = action.request.uri.queryParameters;
-    final keys = _serializeTree(parent: params["parent"])["keys"]
-        as List<Map<String, dynamic>>;
+    final keys =
+        _serializeTree(parent: params["parent"])["keys"]
+            as List<Map<String, dynamic>>;
     final widget = keys.firstWhereOrNull(
       (info) => info["key"] == action.request.uri.queryParameters["key"],
     );
     if (widget == null) {
-      action.sendError(
+      await action.sendError(
         Exception("Given key doesn't exist."),
         StackTrace.current,
       );
@@ -396,8 +374,9 @@ class _Driver {
     final params = action.request.uri.queryParameters;
 
     // check if scrollable-key exists
-    final keys = _serializeTree(parent: params["parent"])["keys"]
-        as List<Map<String, dynamic>>;
+    final keys =
+        _serializeTree(parent: params["parent"])["keys"]
+            as List<Map<String, dynamic>>;
     final widget = keys.firstWhereOrNull(
       (info) => info["key"] == params["scrollable-key"],
     );
@@ -427,8 +406,9 @@ class _Driver {
       await Future.delayed(Duration(milliseconds: delay));
 
       // check if key exists
-      final newKeys = _serializeTree(includeElement: true)["keys"]
-          as List<Map<String, dynamic>>;
+      final newKeys =
+          _serializeTree(includeElement: true)["keys"]
+              as List<Map<String, dynamic>>;
       final keyWidget = newKeys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
       );
@@ -491,8 +471,9 @@ class _Driver {
           await gesture.moveBy(Offset(signedSlopX, diffY));
           if (offsetY.abs() <= touchSlopY) {
             // The drag ends on or before getting to the horizontal extension of the horizontal edge.
-            await gesture
-                .moveBy(Offset(offsetX - signedSlopX, offsetY - diffY));
+            await gesture.moveBy(
+              Offset(offsetX - signedSlopX, offsetY - diffY),
+            );
           } else {
             final double diffY2 = signedSlopY - diffY;
             final double diffX2 = inverseOffsetSlope * diffY2;
@@ -500,7 +481,8 @@ class _Driver {
             // The vector from the edge of the box to the horizontal extension of the horizontal edge.
             await gesture.moveBy(Offset(diffX2, diffY2));
             await gesture.moveBy(
-                Offset(offsetX - diffX2 - signedSlopX, offsetY - signedSlopY));
+              Offset(offsetX - diffX2 - signedSlopX, offsetY - signedSlopY),
+            );
           }
         } else {
           assert(offsetY.abs() > touchSlopY);
@@ -512,8 +494,9 @@ class _Driver {
           await gesture.moveBy(Offset(diffX, signedSlopY));
           if (offsetX.abs() <= touchSlopX) {
             // The drag ends on or before getting to the vertical extension of the vertical edge.
-            await gesture
-                .moveBy(Offset(offsetX - diffX, offsetY - signedSlopY));
+            await gesture.moveBy(
+              Offset(offsetX - diffX, offsetY - signedSlopY),
+            );
           } else {
             final double diffX2 = signedSlopX - diffX;
             final double diffY2 = offsetSlope * diffX2;
@@ -521,14 +504,16 @@ class _Driver {
             // The vector from the edge of the box to the vertical extension of the vertical edge.
             await gesture.moveBy(Offset(diffX2, diffY2));
             await gesture.moveBy(
-                Offset(offsetX - signedSlopX, offsetY - diffY2 - signedSlopY));
+              Offset(offsetX - signedSlopX, offsetY - diffY2 - signedSlopY),
+            );
           }
         }
       } else {
         // The drag goes through the corner of the box.
         await gesture.moveBy(Offset(signedSlopX, signedSlopY));
-        await gesture
-            .moveBy(Offset(offsetX - signedSlopX, offsetY - signedSlopY));
+        await gesture.moveBy(
+          Offset(offsetX - signedSlopX, offsetY - signedSlopY),
+        );
       }
     } else {
       // The drag ends inside the box.
@@ -590,121 +575,86 @@ class _Driver {
         "render": node.toDescription(),
       };
 
-      if (element.widget is CupertinoSwitch) {
-        out["value"] = (element.widget as CupertinoSwitch).value;
-      } else if (element.widget is Switch) {
-        out["value"] = (element.widget as Switch).value;
-      } else if (element.widget is Checkbox) {
-        out["value"] = (element.widget as Checkbox).value;
-      } else if (element.widget is Radio) {
-        out["value"] = (element.widget as Radio).value;
+      switch (element.widget) {
+        case CupertinoSwitch(:final value):
+          out["value"] = value;
+        case Switch(:final value):
+          out["value"] = value;
+        case Checkbox(:final value):
+          out["value"] = value;
+        case Radio(:final value):
+          out["value"] = value;
       }
 
       if (includeElement) {
         out["element"] = element;
       }
 
-      if (node.value is TextSpan) {
-        out["text"] = (node.value as TextSpan).text;
+      if (node.value case TextSpan(:final text)) {
+        out["text"] = text;
       }
 
-      if (node.value is RenderParagraph && element.widget is RichText) {
-        var n = node.value as RenderParagraph?;
-        node.getChildren().forEach((subnode) {
-          if (subnode.value is TextSpan) {
-            var textNode = (subnode.value as TextSpan);
-            var text = textNode.toPlainText();
-            var textInfo = <String, dynamic>{
-              "text": text,
-            };
-            textInfo["size"] = {
-              "height": n!.size.height,
-              "width": n.size.width,
-            };
-            var pos = n.localToGlobal(Offset.zero);
-            textInfo["position"] = {
-              "left": pos.dx,
-              "top": pos.dy,
-            };
-            textInfo["style"] = {
-              "color": textNode.style?.color?.value.toRadixString(16),
-              "fontSize": textNode.style?.fontSize
+      if (node.value case final RenderParagraph n
+          when element.widget is RichText) {
+        for (final subnode in node.getChildren()) {
+          if (subnode.value case final TextSpan textNode) {
+            final pos = n.localToGlobal(Offset.zero);
+            final textInfo = <String, dynamic>{
+              "text": textNode.toPlainText(),
+              "size": {"height": n.size.height, "width": n.size.width},
+              "position": {"left": pos.dx, "top": pos.dy},
+              "style": {
+                "color": textNode.style?.color?.toARGB32().toRadixString(16),
+                "fontSize": textNode.style?.fontSize,
+              },
             };
             out["text"] = textInfo;
             texts.add(textInfo);
           }
-        });
+        }
       }
 
-      if (node.value is RenderEditable) {
-        var n = node.value as RenderEditable;
-        var pos = n.localToGlobal(Offset.zero);
-        String? text = "";
-        if (n.text != null && n.text is TextSpan) {
-          text = (n.text! as TextSpan).text;
-        }
+      if (node.value case final RenderEditable n) {
+        final pos = n.localToGlobal(Offset.zero);
+        final text = switch (n.text) {
+          TextSpan(:final text) => text,
+          _ => "",
+        };
         editables.add({
-          "size": {
-            "height": n.size.height,
-            "width": n.size.width,
-          },
-          "position": {
-            "left": pos.dx,
-            "top": pos.dy,
-          },
+          "size": {"height": n.size.height, "width": n.size.width},
+          "position": {"left": pos.dx, "top": pos.dy},
           "text": text,
           "plain_text": n.plainText,
         });
       }
 
-      if (node.value is RenderBox) {
-        var n = node.value as RenderBox;
-        out["size"] = {
-          "height": n.size.height,
-          "width": n.size.width,
-        };
-        var pos = n.localToGlobal(Offset.zero);
-        out["position"] = {
-          "left": pos.dx,
-          "top": pos.dy,
-        };
+      if (node.value case final RenderBox n) {
+        out["size"] = {"height": n.size.height, "width": n.size.width};
+        final pos = n.localToGlobal(Offset.zero);
+        out["position"] = {"left": pos.dx, "top": pos.dy};
       }
 
-      List<Map<String, Object?>> props = [];
-      out["props"] = props;
+      out["props"] = [
+        for (final p in node.getProperties())
+          if (p is IterableProperty && p.name == "gestures")
+            {"gestures": p.value},
+      ];
 
-      node.getProperties().forEach((p) {
-        if (p is IterableProperty && p.name == "gestures") {
-          props.add({
-            "gestures": p.value,
-          });
-        }
-      });
-
-      String key;
-      if (element.widget.key is ValueKey) {
-        key = (element.widget.key as ValueKey).value.toString();
-        out["key"] = key;
+      if (element.widget.key case ValueKey(:final value)) {
+        out["key"] = value.toString();
         keys.add({...out});
       }
 
-      List<Map<String, Object?>?> children = [];
+      final children = <Map<String, Object?>?>[];
       out["children"] = children;
 
-      element.visitChildren((node) {
-        children.add(serialize(node));
-      });
+      element.visitChildren((child) => children.add(serialize(child)));
 
       return out;
     }
 
     final tree = serialize(startElement);
 
-    return {
-      "texts": texts,
-      "editables": editables,
-      "tree": tree,
-      "keys": keys,
-    };
+    return {"texts": texts, "editables": editables, "tree": tree, "keys": keys};
   }
 }

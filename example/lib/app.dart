@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -11,20 +13,20 @@ class MyApp extends StatelessWidget {
         //
         // Try running your application with "flutter run". You'll see the
         // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
+        // changing the seedColor below to Colors.green and then invoke
         // "hot reload" (press "r" in the console where you ran "flutter run",
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        colorScheme: .fromSeed(seedColor: Colors.blue),
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({required this.title});
+  const MyHomePage({super.key, required this.title});
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -38,7 +40,7 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -87,9 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // horizontal).
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Text(
-            'You have pushed the button this many times:',
-          ),
+          Text('You have pushed the button this many times:'),
           Text(
             '$_counter',
             style: Theme.of(context).textTheme.headlineMedium,
@@ -119,10 +119,10 @@ class _MyHomePageState extends State<MyHomePage> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               onChanged: (val) {
-                print("changed $val");
+                debugPrint("changed $val");
               },
               onSubmitted: (val) {
-                print("submitted $val");
+                debugPrint("submitted $val");
               },
             ),
           ),
@@ -141,7 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 return ListTile(
                   key: Key("list_item_$i"),
                   onTap: () {
-                    print("tap on $i");
+                    debugPrint("tap on $i");
                   },
                   title: Text("$i"),
                 );
