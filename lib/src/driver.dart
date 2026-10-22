@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart' show TestGesture;
 
 part 'autopilot.dart';
+part 'mcp.dart';
 
 typedef Handler = Future<void> Function(AutopilotAction r);
 
@@ -46,25 +47,32 @@ class AutopilotAction {
   }
 }
 
+typedef _Params = Map<String, String>;
+typedef _Action = Future<Object?> Function(_Params params);
+
+const _success = {"status": "success"};
+
 class _Driver {
   _Driver({
     required String host,
     required int port,
     required Map<String, Handler> extraHandlers,
   }) {
+    final mcp = _Mcp(this);
     Map<String, Handler> routes = {
-      '/widgets': _getWidgets,
-      '/keys': _getKeys,
-      '/texts': _getTexts,
-      '/editables': _getEditables,
-      '/type': _doType,
-      '/tap': _doTap,
-      '/hold': _doHold,
-      '/drag': _doDrag,
-      '/scroll': _doScroll,
-      '/scroll-into': _doScrollInto,
-      '/screenshot': _getScreenshot,
-      '/keyboard': _keyboard,
+      '/widgets': _rest(getWidgets),
+      '/keys': _rest(getKeys),
+      '/texts': _rest(getTexts),
+      '/editables': _rest(getEditables),
+      '/type': _rest(type),
+      '/tap': _rest(tap),
+      '/hold': _rest(hold),
+      '/drag': _rest(drag),
+      '/scroll': _rest(scroll),
+      '/scroll-into': _rest(scrollInto),
+      '/screenshot': _restScreenshot,
+      '/keyboard': _restKeyboard,
+      '/mcp': mcp.handle,
       ...extraHandlers,
     };
 
@@ -96,17 +104,33 @@ class _Driver {
     }
   }
 
-  Future<void> _keyboard(AutopilotAction action) async {
-    switch (action.request.method) {
-      case "GET":
-        await SystemChannels.textInput.invokeMethod("TextInput.show");
-        await action.sendSuccess();
-      case "DELETE":
-        await SystemChannels.textInput.invokeMethod("TextInput.hide");
-        await action.sendSuccess();
-      case "POST":
-        await _handleKeyboardAction(action);
-    }
+  Handler _rest(_Action run) => (action) async {
+    final body = await run(action.request.uri.queryParameters);
+    await action.writeResponse(body: body);
+  };
+
+  Future<void> _restScreenshot(AutopilotAction action) async {
+    final pngBytes = await screenshot();
+    action.response.headers.set("content-type", "image/png");
+    action.response.add(pngBytes);
+    await action.response.close();
+  }
+
+  Future<void> _restKeyboard(AutopilotAction action) async {
+    final body = switch (action.request.method) {
+      "GET" => await setKeyboardVisible(true),
+      "DELETE" => await setKeyboardVisible(false),
+      "POST" => await keyboardAction(action.request.uri.queryParameters),
+      final method => throw Exception("Method $method not allowed"),
+    };
+    await action.writeResponse(body: body);
+  }
+
+  Future<Object?> setKeyboardVisible(bool visible) async {
+    await SystemChannels.textInput.invokeMethod(
+      visible ? "TextInput.show" : "TextInput.hide",
+    );
+    return _success;
   }
 
   Map<String, TextInputAction> get submitTypes =>
@@ -115,54 +139,30 @@ class _Driver {
   String get _acceptableValuesMsg =>
       'Acceptable values are: [${submitTypes.keys.join(', ')}]';
 
-  Future<void> _handleKeyboardAction(AutopilotAction action) async {
-    final type = action.request.uri.queryParameters['type'];
+  Future<Object?> keyboardAction(_Params params) async {
+    final type = params['type'];
     final inputAction = submitTypes[type];
     if (inputAction == null) {
-      await action.sendError(
-        Exception(
-          "Type '$type' is not an available action. $_acceptableValuesMsg",
-        ),
-        StackTrace.current,
-      );
-      return;
-    }
-
-    final editable = focusedEditable();
-
-    if (editable != null) {
-      editable.performAction(inputAction);
-      await action.sendSuccess();
-    } else {
-      await action.sendError(
-        Exception("No text field is in focus"),
-        StackTrace.current,
+      throw Exception(
+        "Type '$type' is not an available action. $_acceptableValuesMsg",
       );
     }
+
+    _requireFocusedEditable().performAction(inputAction);
+    return _success;
   }
 
-  Future<void> _getWidgets(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
+  Future<Object?> getWidgets(_Params params) async {
     final widgetTree = _serializeTree(parent: params['parent'])["tree"];
-
-    if (widgetTree == null) {
-      await action.sendError(
-        Exception("Render tree unavailable"),
-        StackTrace.current,
-      );
-    } else {
-      await action.writeResponse(body: widgetTree);
-    }
+    if (widgetTree == null) throw Exception("Render tree unavailable");
+    return widgetTree;
   }
 
-  Future<void> _getKeys(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
-    final keys = _serializeTree(parent: params['parent'])["keys"];
-    await action.writeResponse(body: keys);
+  Future<Object?> getKeys(_Params params) async {
+    return _serializeTree(parent: params['parent'])["keys"];
   }
 
-  Future<void> _getTexts(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
+  Future<Object?> getTexts(_Params params) async {
     final serialized = _serializeTree(parent: params['parent']);
 
     var texts = serialized["texts"] as List<Map<String, dynamic>>?;
@@ -183,16 +183,14 @@ class _Driver {
         texts = [];
       }
     }
-    await action.writeResponse(body: texts);
+    return texts;
   }
 
-  Future<void> _getEditables(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
-    final texts = _serializeTree(parent: params['parent'])["editables"];
-    await action.writeResponse(body: texts);
+  Future<Object?> getEditables(_Params params) async {
+    return _serializeTree(parent: params['parent'])["editables"];
   }
 
-  Future<void> _getScreenshot(AutopilotAction action) async {
+  Future<Uint8List> screenshot() async {
     final renderView = WidgetsBinding.instance.renderViews.first;
     // ignore: invalid_use_of_protected_member
     final layer = renderView.layer as OffsetLayer;
@@ -201,10 +199,7 @@ class _Driver {
     final image = await layer.toImage(layer.offset & pixelSize);
 
     final byteData = (await image.toByteData(format: .png))!;
-    final pngBytes = byteData.buffer.asUint8List();
-    action.response.headers.set("content-type", "image/png");
-    action.response.add(pngBytes);
-    await action.response.close();
+    return byteData.buffer.asUint8List();
   }
 
   EditableTextState? focusedEditable() {
@@ -228,20 +223,15 @@ class _Driver {
     return res;
   }
 
-  Future<void> _doType(AutopilotAction action) async {
-    var text = action.request.uri.queryParameters["text"]!;
+  EditableTextState _requireFocusedEditable() {
+    return focusedEditable() ?? (throw Exception("No text field is in focus"));
+  }
 
-    final editable = focusedEditable();
-
-    if (editable != null) {
-      editable.updateEditingValue(TextEditingValue(text: text));
-      await action.sendSuccess();
-    } else {
-      await action.sendError(
-        Exception("No text field is in focus"),
-        StackTrace.current,
-      );
-    }
+  Future<Object?> type(_Params params) async {
+    _requireFocusedEditable().updateEditingValue(
+      TextEditingValue(text: params["text"]!),
+    );
+    return _success;
   }
 
   TestGesture _createGesture() {
@@ -252,10 +242,9 @@ class _Driver {
     );
   }
 
-  Future<void> _doTap(AutopilotAction action) async {
+  Future<Object?> tap(_Params params) async {
     final gesture = _createGesture();
 
-    var params = action.request.uri.queryParameters;
     double? x, y;
 
     if (params.containsKey("x") && params.containsKey("y")) {
@@ -268,20 +257,14 @@ class _Driver {
       final widget = keys.firstWhereOrNull(
         (info) => info["key"] == params["key"],
       );
-      if (widget == null) {
-        await action.sendError(
-          Exception("Given key doesn't exist."),
-          StackTrace.current,
-        );
-        return;
-      } else {
-        x = widget["position"]["left"];
-        y = widget["position"]["top"];
+      if (widget == null) throw Exception("Given key doesn't exist.");
 
-        if (params["center"] == "true") {
-          x = widget["position"]["left"] + widget["size"]["width"] / 2;
-          y = widget["position"]["top"] + widget["size"]["height"] / 2;
-        }
+      x = widget["position"]["left"];
+      y = widget["position"]["top"];
+
+      if (params["center"] == "true") {
+        x = widget["position"]["left"] + widget["size"]["width"] / 2;
+        y = widget["position"]["top"] + widget["size"]["height"] / 2;
       }
     } else if (params.containsKey("text")) {
       final texts =
@@ -290,89 +273,66 @@ class _Driver {
       final widget = texts.firstWhereOrNull(
         (info) => info["text"] == params["text"],
       );
-      if (widget == null) {
-        await action.sendError(
-          Exception("Given text doesn't exist."),
-          StackTrace.current,
-        );
-        return;
-      } else {
-        x = widget["position"]["left"];
-        y = widget["position"]["top"];
+      if (widget == null) throw Exception("Given text doesn't exist.");
 
-        if (params["center"] == "true") {
-          x = widget["position"]["left"] + widget["size"]["width"] / 2;
-          y = widget["position"]["top"] + widget["size"]["height"] / 2;
-        }
+      x = widget["position"]["left"];
+      y = widget["position"]["top"];
+
+      if (params["center"] == "true") {
+        x = widget["position"]["left"] + widget["size"]["width"] / 2;
+        y = widget["position"]["top"] + widget["size"]["height"] / 2;
       }
     }
 
     if (x == null || y == null) {
-      await action.sendError(
-        Exception("Unable to get x & y points. Validate your params."),
-        StackTrace.current,
-      );
-      return;
+      throw Exception("Unable to get x & y points. Validate your params.");
     }
 
     await gesture.down(Offset(x, y));
     await gesture.up();
-    await action.sendSuccess();
+    return _success;
   }
 
-  Future<void> _doHold(AutopilotAction action) async {
+  Future<Object?> hold(_Params params) async {
     final gesture = _createGesture();
 
     await gesture.down(
-      Offset(
-        double.parse(action.request.uri.queryParameters["x"]!),
-        double.parse(action.request.uri.queryParameters["y"]!),
-      ),
+      Offset(double.parse(params["x"]!), double.parse(params["y"]!)),
     );
     await Future.delayed(const Duration(milliseconds: 500));
     await gesture.up();
-    await action.sendSuccess();
+    return _success;
   }
 
-  Future<void> _doDrag(AutopilotAction action) async {
+  Future<Object?> drag(_Params params) async {
     await _drag(
-      double.parse(action.request.uri.queryParameters["x"]!),
-      double.parse(action.request.uri.queryParameters["y"]!),
-      double.parse(action.request.uri.queryParameters["dx"]!),
-      double.parse(action.request.uri.queryParameters["dy"]!),
+      double.parse(params["x"]!),
+      double.parse(params["y"]!),
+      double.parse(params["dx"]!),
+      double.parse(params["dy"]!),
     );
-
-    await action.sendSuccess();
+    return _success;
   }
 
-  Future<void> _doScroll(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
+  Future<Object?> scroll(_Params params) async {
     final keys =
         _serializeTree(parent: params["parent"])["keys"]
             as List<Map<String, dynamic>>;
     final widget = keys.firstWhereOrNull(
-      (info) => info["key"] == action.request.uri.queryParameters["key"],
+      (info) => info["key"] == params["key"],
     );
-    if (widget == null) {
-      await action.sendError(
-        Exception("Given key doesn't exist."),
-        StackTrace.current,
-      );
-    } else {
-      await _drag(
-        widget["position"]["left"],
-        widget["position"]["top"],
-        double.parse(action.request.uri.queryParameters["dx"]!),
-        double.parse(action.request.uri.queryParameters["dy"]!),
-      );
+    if (widget == null) throw Exception("Given key doesn't exist.");
 
-      await action.sendSuccess();
-    }
+    await _drag(
+      widget["position"]["left"],
+      widget["position"]["top"],
+      double.parse(params["dx"]!),
+      double.parse(params["dy"]!),
+    );
+    return _success;
   }
 
-  Future<void> _doScrollInto(AutopilotAction action) async {
-    final params = action.request.uri.queryParameters;
-
+  Future<Object?> scrollInto(_Params params) async {
     // check if scrollable-key exists
     final keys =
         _serializeTree(parent: params["parent"])["keys"]
@@ -380,13 +340,7 @@ class _Driver {
     final widget = keys.firstWhereOrNull(
       (info) => info["key"] == params["scrollable-key"],
     );
-    if (widget == null) {
-      await action.sendError(
-        Exception("Given container-key doesn't exist."),
-        StackTrace.current,
-      );
-      return;
-    }
+    if (widget == null) throw Exception("Given container-key doesn't exist.");
 
     // timeout params
     int start = DateTime.now().millisecondsSinceEpoch;
@@ -398,8 +352,8 @@ class _Driver {
       await _drag(
         widget["position"]["left"],
         widget["position"]["top"],
-        double.parse(action.request.uri.queryParameters["dx"]!),
-        double.parse(action.request.uri.queryParameters["dy"]!),
+        double.parse(params["dx"]!),
+        double.parse(params["dy"]!),
       );
 
       // wait for delay
@@ -415,21 +369,13 @@ class _Driver {
       if (keyWidget != null) {
         // ensure the widget is visible
         await Scrollable.ensureVisible(keyWidget["element"] as BuildContext);
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          action.sendSuccess();
-        });
-
-        return;
+        await WidgetsBinding.instance.endOfFrame;
+        return _success;
       }
 
       // check if we are out of time
       if (DateTime.now().millisecondsSinceEpoch >= start + timeout) {
-        await action.sendError(
-          Exception("Operation timed out."),
-          StackTrace.current,
-        );
-        return;
+        throw Exception("Operation timed out.");
       }
     }
   }

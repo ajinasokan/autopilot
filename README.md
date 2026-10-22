@@ -70,6 +70,24 @@ Run it:
 python -m pytest example_test.py
 ```
 
+## MCP
+
+Autopilot also serves an [MCP](https://modelcontextprotocol.io) endpoint at `/mcp`, so AI agents can drive the app. It offers the same actions as the APIs below as tools, and `screenshot` returns an image the agent can see.
+
+Add it to Claude Code:
+
+```shell
+claude mcp add --transport http autopilot http://localhost:8080/mcp
+```
+
+Or to Codex:
+
+```shell
+codex mcp add autopilot --url http://localhost:8080/mcp
+```
+
+The endpoint uses the Streamable HTTP transport and rejects requests from browser pages on other origins. Like the rest of Autopilot it has no authentication, so only include it in test builds.
+
 ## Inspiration
 
 Flutter has a really amazing testing suite for Unit, UI and Integration testing. But one problem is that you need to know/learn Dart and you have to share the source code of the app to the person who writes tests. This doesn't work in every work environments.
